@@ -1,0 +1,27 @@
+# Hôpital / clinique FICTIF à Strasbourg, année 2025 (profil inventé, à remplacer par une vraie courbe).
+# Activité 24 h/24 avec une journée plus chargée, activité programmée en semaine, cuisine aux heures des repas.
+# Chauffage supposé non électrique (réseau de chaleur ou gaz). Jours fériés non modélisés.
+period: {start: 2025-01-01, end: 2025-12-31, timezone: Europe/Paris}
+
+site:
+  adapter: bottom_up
+  seed: 11
+  appliances:
+    - {type: schedule, name: talon_blocs_imagerie_ventilation, power_w: 150000, windows: [[0, 24]]}
+    - {type: schedule, name: services_de_jour, power_w: 120000, windows: [[7, 19]]}
+    - {type: schedule, name: activite_programmee_semaine, power_w: 60000, windows: [[8, 18]], days: [0, 1, 2, 3, 4]}
+    - {type: schedule, name: cuisine, power_w: 50000, windows: [[6, 9], [10.5, 13], [17, 19]]}
+    - {type: cyclic,   name: groupes_froid, power_w: 40000, on_minutes: 15, cycles_per_hour: 2}
+    - {type: daily_run, name: sterilisation, power_w: 80000, duration_h: 3, earliest_h: 9, latest_end_h: 17, days: [0, 1, 2, 3, 4]}
+
+market:
+  prices: {adapter: energy_charts, bzn: FR}
+  offers:
+    - {type: spot}
+    - {type: fixed, price_eur_mwh: 80}
+    - {type: bloc_spot, bloc_kw: 200, bloc_price_eur_mwh: 80}
+
+pv: {peak_kw: 250, source: odre_irradiance, region: 44, lat: 48.58, lon: 7.75, efficiency: 0.20, pmax_w_m2: 250}
+battery: {capacity_kwh: 250, c_rate: 0.5, round_trip_efficiency: 0.90, soc_min: 0.10, soc_max: 0.90, cycle_life: 5000}
+strategy: {type: price_threshold, peak_limit_kw: 400, peak_reserve_kwh: 60}   # arbitrage + écrêtage des pointes, 30 % de la capacité utile en réserve
+grid: {subscribed_kw: 400, penalty_eur_per_kw: 10}   # puissance souscrite et pénalité INVENTÉES

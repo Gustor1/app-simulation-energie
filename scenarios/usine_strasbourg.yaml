@@ -1,0 +1,26 @@
+# Usine FICTIVE à Strasbourg, année 2025 (profil inventé, à remplacer par une vraie courbe).
+# Production en 2 × 8 (5 h – 21 h) du lundi au vendredi, maintenance le samedi matin, four électrique
+# 3 h par jour ouvré, compresseur d'air en cycles, veille la nuit et le week-end. Jours fériés non modélisés.
+period: {start: 2025-01-01, end: 2025-12-31, timezone: Europe/Paris}
+
+site:
+  adapter: bottom_up
+  seed: 23
+  appliances:
+    - {type: schedule,  name: veille_securite_froid, power_w: 60000, windows: [[0, 24]]}
+    - {type: schedule,  name: lignes_de_production, power_w: 400000, windows: [[5, 21]], days: [0, 1, 2, 3, 4]}
+    - {type: schedule,  name: maintenance_samedi, power_w: 150000, windows: [[6, 12]], days: [5]}
+    - {type: cyclic,    name: compresseur_air, power_w: 45000, on_minutes: 10, cycles_per_hour: 2}
+    - {type: daily_run, name: four_electrique, power_w: 300000, duration_h: 3, earliest_h: 6, latest_end_h: 15, days: [0, 1, 2, 3, 4]}
+
+market:
+  prices: {adapter: energy_charts, bzn: FR}
+  offers:
+    - {type: spot}
+    - {type: fixed, price_eur_mwh: 80}
+    - {type: bloc_spot, bloc_kw: 300, bloc_price_eur_mwh: 80}
+
+pv: {peak_kw: 500, source: odre_irradiance, region: 44, lat: 48.58, lon: 7.75, efficiency: 0.20, pmax_w_m2: 250}
+battery: {capacity_kwh: 1000, c_rate: 0.5, round_trip_efficiency: 0.90, soc_min: 0.10, soc_max: 0.90, cycle_life: 5000}
+strategy: {type: price_threshold, peak_limit_kw: 650, peak_reserve_kwh: 240}   # arbitrage + écrêtage des pointes, 30 % de la capacité utile en réserve
+grid: {subscribed_kw: 650, penalty_eur_per_kw: 10}   # puissance souscrite et pénalité INVENTÉES

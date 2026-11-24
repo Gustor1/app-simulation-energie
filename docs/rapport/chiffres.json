@@ -773,6 +773,261 @@
   },
   "jours_spread_x09_sup_usure_median": 0.24
  },
+ "pro": {
+  "hopital": {
+   "conso_mwh": 2370.91,
+   "pointe_kw": 500.0,
+   "pv_mwh": 269.05,
+   "autoconso": 1.0,
+   "autoproduction": 0.11,
+   "cycles": 258.44,
+   "cout_avant": 139277.54,
+   "cout_apres": 126687.26,
+   "penalite_avant": 12000.0,
+   "penalite_apres": 2848.37,
+   "pointe_apres": 469.01,
+   "gain_pv": 14811.52,
+   "gain_batterie": 6930.39,
+   "bat_vie": 15.0,
+   "pv_retour": {
+    "bas": 11.94,
+    "median": 29.09,
+    "haut": 55.82
+   },
+   "bat_retour": {
+    "bas": 10.82,
+    "median": 15.33,
+    "haut": 19.84
+   },
+   "capex_pv": {
+    "bas": 150000.0,
+    "median": 300000.0,
+    "haut": 450000.0
+   },
+   "capex_bat": {
+    "bas": 75000.0,
+    "median": 106250.0,
+    "haut": 137500.0
+   }
+  },
+  "usine": {
+   "conso_mwh": 2609.1,
+   "pointe_kw": 790.0,
+   "pv_mwh": 538.11,
+   "autoconso": 0.93,
+   "autoproduction": 0.18,
+   "cycles": 260.84,
+   "cout_avant": 167695.97,
+   "cout_apres": 137141.65,
+   "penalite_avant": 16800.0,
+   "penalite_apres": 1534.24,
+   "pointe_apres": 723.49,
+   "gain_pv": 18595.32,
+   "gain_batterie": 27224.76,
+   "bat_vie": 15.0,
+   "pv_retour": {
+    "bas": 28.91,
+    "median": 43.21,
+    "haut": 62.53
+   },
+   "bat_retour": {
+    "bas": 9.18,
+    "median": 11.94,
+    "haut": 14.69
+   },
+   "capex_pv": {
+    "bas": 375000.0,
+    "median": 487500.0,
+    "haut": 600000.0
+   },
+   "capex_bat": {
+    "bas": 250000.0,
+    "median": 325000.0,
+    "haut": 400000.0
+   }
+  },
+  "strategies": {
+   "PME": {
+    "prix seul": {
+     "gain": 1744.32,
+     "cycles": 340.0,
+     "penalite": 674.08,
+     "pointe": 107.72,
+     "penalite_sans": 2640.0
+    },
+    "écrêtage seul": {
+     "gain": 671.98,
+     "cycles": 4.27,
+     "penalite": 0.0,
+     "pointe": 90.0,
+     "penalite_sans": 2640.0
+    },
+    "prix + écrêtage (réserve 30 %)": {
+     "gain": 1907.81,
+     "cycles": 260.0,
+     "penalite": 86.53,
+     "pointe": 98.65,
+     "penalite_sans": 2640.0
+    }
+   },
+   "Hôpital": {
+    "prix seul": {
+     "gain": 5222.87,
+     "cycles": 334.31,
+     "penalite": 6032.34,
+     "pointe": 486.93,
+     "penalite_sans": 12000.0
+    },
+    "écrêtage seul": {
+     "gain": 5961.52,
+     "cycles": 36.35,
+     "penalite": 0.0,
+     "pointe": 400.0,
+     "penalite_sans": 12000.0
+    },
+    "prix + écrêtage (réserve 30 %)": {
+     "gain": 6930.39,
+     "cycles": 258.44,
+     "penalite": 2848.37,
+     "pointe": 469.01,
+     "penalite_sans": 12000.0
+    }
+   },
+   "Usine": {
+    "prix seul": {
+     "gain": 17628.21,
+     "cycles": 328.81,
+     "penalite": 15682.4,
+     "pointe": 790.0,
+     "penalite_sans": 16800.0
+    },
+    "écrêtage seul": {
+     "gain": 16169.94,
+     "cycles": 35.51,
+     "penalite": 0.0,
+     "pointe": 650.0,
+     "penalite_sans": 16800.0
+    },
+    "prix + écrêtage (réserve 30 %)": {
+     "gain": 27224.76,
+     "cycles": 260.84,
+     "penalite": 1534.24,
+     "pointe": 723.49,
+     "penalite_sans": 16800.0
+    }
+   }
+  },
+  "sensibilite_penalite": {
+   "PME": {
+    "vie": 15,
+    "capex_median": 42500.0,
+    "lignes": [
+     {
+      "penalite_eur_kw_mois": 0,
+      "gain": 1320.0,
+      "retour_median": 32.2
+     },
+     {
+      "penalite_eur_kw_mois": 5,
+      "gain": 1614.0,
+      "retour_median": 26.3
+     },
+     {
+      "penalite_eur_kw_mois": 10,
+      "gain": 1908.0,
+      "retour_median": 22.3
+     },
+     {
+      "penalite_eur_kw_mois": 15,
+      "gain": 2202.0,
+      "retour_median": 19.3
+     },
+     {
+      "penalite_eur_kw_mois": 20,
+      "gain": 2495.0,
+      "retour_median": 17.0
+     },
+     {
+      "penalite_eur_kw_mois": 30,
+      "gain": 3083.0,
+      "retour_median": 13.8
+     }
+    ]
+   },
+   "Hôpital": {
+    "vie": 15,
+    "capex_median": 106250.0,
+    "lignes": [
+     {
+      "penalite_eur_kw_mois": 0,
+      "gain": 3746.0,
+      "retour_median": 28.4
+     },
+     {
+      "penalite_eur_kw_mois": 5,
+      "gain": 5338.0,
+      "retour_median": 19.9
+     },
+     {
+      "penalite_eur_kw_mois": 10,
+      "gain": 6930.0,
+      "retour_median": 15.3
+     },
+     {
+      "penalite_eur_kw_mois": 15,
+      "gain": 8522.0,
+      "retour_median": 12.5
+     },
+     {
+      "penalite_eur_kw_mois": 20,
+      "gain": 10114.0,
+      "retour_median": 10.5
+     },
+     {
+      "penalite_eur_kw_mois": 30,
+      "gain": 13298.0,
+      "retour_median": 8.0
+     }
+    ]
+   },
+   "Usine": {
+    "vie": 15,
+    "capex_median": 325000.0,
+    "lignes": [
+     {
+      "penalite_eur_kw_mois": 0,
+      "gain": 12867.0,
+      "retour_median": 25.3
+     },
+     {
+      "penalite_eur_kw_mois": 5,
+      "gain": 20046.0,
+      "retour_median": 16.2
+     },
+     {
+      "penalite_eur_kw_mois": 10,
+      "gain": 27225.0,
+      "retour_median": 11.9
+     },
+     {
+      "penalite_eur_kw_mois": 15,
+      "gain": 34404.0,
+      "retour_median": 9.4
+     },
+     {
+      "penalite_eur_kw_mois": 20,
+      "gain": 41583.0,
+      "retour_median": 7.8
+     },
+     {
+      "penalite_eur_kw_mois": 30,
+      "gain": 55941.0,
+      "retour_median": 5.8
+     }
+    ]
+   }
+  }
+ },
  "strasbourg": {
   "ghi_kwh_m2": 1345.27,
   "productible_modele": 1076.21,

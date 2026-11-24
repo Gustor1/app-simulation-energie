@@ -784,6 +784,124 @@ def summarize(r_):
     }
 
 
+# --- Hôpital et usine (Strasbourg) --------------------------------------------------------
+print("Hôpital et usine")
+pro = {}
+for key, file_, week in [("hopital", "hopital_strasbourg", "2025-06-16"), ("usine", "usine_strasbourg", "2025-06-16")]:
+    cfg_ = scenario.read(ROOT / "scenarios" / f"{file_}.yaml")
+    res_ = scenario.run(cfg_)
+    pro[key] = (cfg_, res_)
+    by_ = lb.simulate_appliances(cfg_["site"]["appliances"], week, (pd.Timestamp(week) + pd.Timedelta(days=6)).strftime("%Y-%m-%d"),
+                                 seed=cfg_["site"]["seed"])
+    title_ = {"hopital": "Hôpital fictif (bottom-up)", "usine": "Usine fictive (bottom-up)"}[key]
+    fig(f"pro_{key}_semaine", plots.load_curve(simulate.run(by_.sum(axis=1).rename("load_kw")), week, 7, title_, by=by_))
+    for p in scenario.make_plots(res_, FIG / f"pro_{key}", week):
+        print("  ", key, p.name)
+
+# comparaison des stratégies de pilotage de la batterie (gain dû à la batterie, en plus du PV)
+strategies_cmp = {}
+for key, file_ in [("PME", "pme_strasbourg"), ("Hôpital", "hopital_strasbourg"), ("Usine", "usine_strasbourg")]:
+    base_ = scenario.read(ROOT / "scenarios" / f"{file_}.yaml")
+    usable_ = base_["battery"]["capacity_kwh"] * 0.8
+    sub_ = base_["grid"]["subscribed_kw"]
+    variants_ = {
+        "prix seul": {"type": "price_threshold"},
+        "écrêtage seul": {"type": "peak_shaving", "limit_kw": sub_, "margin_kw": 0.05 * sub_},
+        "prix + écrêtage (réserve 30 %)": {"type": "price_threshold", "peak_limit_kw": sub_, "peak_reserve_kwh": 0.3 * usable_},
+    }
+    strategies_cmp[key] = {}
+    for vname, strat in variants_.items():
+        c_ = dict(base_)
+        c_["strategy"] = strat
+        r_ = scenario.run(c_)
+        g_ = scenario.component_gains(r_)["batterie"]
+        strategies_cmp[key][vname] = {"gain": g_["gain_eur"], "cycles": g_["cycles_an"], "penalite": r_.penalty_after["penalite_eur"],
+                                      "pointe": r_.penalty_after["pointe_kw"], "penalite_sans": r_.penalty_before["penalite_eur"],
+                                      "res": r_}
+f, axes = plt.subplots(1, 3, figsize=(15, 4))
+vcolors = [C["grid_after"], C["bat"], C["pv_self"]]
+for ax_, (key, d_) in zip(axes, strategies_cmp.items()):
+    names_ = list(d_)
+    vals_ = [d_[n]["gain"] for n in names_]
+    ax_.bar(range(3), vals_, color=vcolors)
+    for i_, n in enumerate(names_):
+        ax_.text(i_, vals_[i_], f"{_n(vals_[i_])} €\n{d_[n]['cycles']:.0f} cycles", ha="center", va="bottom", fontsize=8)
+    ax_.set_xticks(range(3))
+    ax_.set_xticklabels(["prix\nseul", "écrêtage\nseul", "prix +\nécrêtage"], fontsize=9)
+    ax_.set_title(key)
+    ax_.set_ylim(0, max(vals_) * 1.3)
+axes[0].set_ylabel("gain annuel dû à la batterie (€)")
+f.suptitle("Gain de la batterie selon la façon de la piloter (Strasbourg 2025, en plus des panneaux)", fontweight="bold")
+f.tight_layout()
+fig("pro_strategies", f)
+
+usine_cfg, usine_res = pro["usine"]
+usine_prix = strategies_cmp["Usine"]["prix seul"]["res"]
+fig("pro_usine_monotone", plots.duration_curve({
+    "sans équipement": usine_res.before["grid_kw"],
+    "PV + batterie, prix seul": usine_prix.after["grid_kw"],
+    "PV + batterie, prix + écrêtage": usine_res.after["grid_kw"],
+}, limit_kw=usine_cfg["grid"]["subscribed_kw"], title="Usine : monotone de puissance soutirée (2025)"))
+fig("pro_usine_batterie_semaine", plots.battery_use(usine_res.after, "2025-02-03", 7,
+                                                    "Usine, février : batterie en arbitrage + écrêtage des pointes"))
+
+# sensibilité au montant de la pénalité (inventé) : retour de la batterie (prix médian)
+pen_levels = [0, 5, 10, 15, 20, 30]
+sens_pen = {}
+f, ax = plt.subplots(figsize=(10, 4))
+for (key, file_), color in zip([("PME", "pme_strasbourg"), ("Hôpital", "hopital_strasbourg"), ("Usine", "usine_strasbourg")],
+                               [C["grid_after"], C["bat"], C["pv_self"]]):
+    r_ = strategies_cmp[key]["prix + écrêtage (réserve 30 %)"]["res"]
+    cfg_ = r_.config
+    spot_ = r_.inputs["spot_eur_mwh"]
+    mid = simulate.run(r_.inputs["load_kw"], r_.after["pv_kw"], None, None, spot_)  # PV seul
+    sub_ = cfg_["grid"]["subscribed_kw"]
+    e_gain = market.cost_spot(mid["grid_kw"], spot_).total_eur - market.cost_spot(r_.after["grid_kw"], spot_).total_eur
+    cyc = r_.summary_after["cycles_equivalents"]
+    capex_m = economics.capex(battery_kwh=r_.battery.capacity_kwh)["batterie_eur"]
+    life_ = economics.battery_life_years(cyc, r_.battery.cycle_life)
+    rows_ = []
+    for pen in pen_levels:
+        p_gain = (market.overrun_penalty(mid["grid_kw"], sub_, pen)["penalite_eur"]
+                  - market.overrun_penalty(r_.after["grid_kw"], sub_, pen)["penalite_eur"])
+        g_ = e_gain + p_gain
+        rows_.append({"penalite_eur_kw_mois": pen, "gain": round(g_, 0), "retour_median": round(capex_m / g_, 1) if g_ > 0 else None})
+    sens_pen[key] = {"vie": round(life_, 1), "capex_median": capex_m, "lignes": rows_}
+    ax.plot(pen_levels, [min(r["retour_median"] or 99, 60) for r in rows_], marker="o", color=color, label=key)
+ax.axhline(15, color="black", ls=":", lw=1, label="durée de vie ≈ 15 ans")
+ax.set_xlabel("pénalité de dépassement (€ par kW dépassé et par mois)")
+ax.set_ylabel("retour de la batterie, prix médian (ans)")
+ax.set_title("La rentabilité de la batterie dépend surtout du montant des pénalités")
+ax.legend()
+fig("pro_sensibilite_penalite", f)
+
+
+def pro_summary(res_):
+    s_ = res_.summary_after
+    g_ = scenario.component_gains(res_)
+    pv_cap = {lvl: economics.capex(pv_kwc=res_.config["pv"]["peak_kw"], level=lvl)["pv_eur"] for lvl in ("bas", "median", "haut")}
+    bat_cap = {lvl: economics.capex(battery_kwh=res_.battery.capacity_kwh, level=lvl)["batterie_eur"] for lvl in ("bas", "median", "haut")}
+    gp, gb = g_["pv"]["gain_eur"], g_["batterie"]["gain_eur"]
+    return {
+        "conso_mwh": eur(s_["conso_kwh"] / 1000), "pointe_kw": eur(res_.before["grid_kw"].max()),
+        "pv_mwh": eur(s_["pv_kwh"] / 1000), "autoconso": eur(s_["taux_autoconso"]), "autoproduction": eur(s_["taux_autoproduction"]),
+        "cycles": eur(s_["cycles_equivalents"]), "cout_avant": eur(res_.costs_before[0].total_eur), "cout_apres": eur(res_.costs_after[0].total_eur),
+        "penalite_avant": eur(res_.penalty_before["penalite_eur"]), "penalite_apres": eur(res_.penalty_after["penalite_eur"]),
+        "pointe_apres": eur(res_.penalty_after["pointe_kw"]),
+        "gain_pv": eur(gp), "gain_batterie": eur(gb), "bat_vie": eur(g_["batterie"]["vie_ans"]),
+        "pv_retour": {l: (eur(c / (gp - c * economics.PV_OPEX_RATE)) if gp > c * economics.PV_OPEX_RATE else None) for l, c in pv_cap.items()},
+        "bat_retour": {l: (eur(c / gb) if gb > 0 else None) for l, c in bat_cap.items()},
+        "capex_pv": pv_cap, "capex_bat": bat_cap,
+    }
+
+
+N["pro"] = {
+    "hopital": pro_summary(pro["hopital"][1]), "usine": pro_summary(pro["usine"][1]),
+    "strategies": {k: {v: {kk: (eur(vv) if isinstance(vv, float) else vv) for kk, vv in d_.items() if kk != "res"}
+                       for v, d_ in dd.items()} for k, dd in strategies_cmp.items()},
+    "sensibilite_penalite": sens_pen,
+}
+
 N["strasbourg"] = {
     "ghi_kwh_m2": eur(irr.sum() * standard.DT_H / 1000),
     "productible_modele": eur(model_cf.sum() * standard.DT_H),

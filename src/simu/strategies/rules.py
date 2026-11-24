@@ -46,13 +46,19 @@ class PriceThreshold:
     soutirée (ex. la puissance souscrite).
     ``anticipate_pv`` (défaut : oui) : la météo du lendemain étant connue, la quantité achetée au
     réseau pour remplir la batterie est diminuée du surplus solaire attendu dans la journée.
+    ``peak_limit_kw`` (optionnel) : cumul avec l'écrêtage des pointes ; au-dessus de cette puissance,
+    la batterie décharge en priorité. ``peak_reserve_kwh`` : énergie que l'arbitrage laisse en
+    réserve pour ces pointes.
     """
 
     name = "price_threshold"
 
     def __init__(self, allow_export: bool = False, min_margin_eur_mwh: float = 0.0, tz: str = "Europe/Paris",
-                 grid_limit_kw: float | None = None, anticipate_pv: bool = True):
+                 grid_limit_kw: float | None = None, anticipate_pv: bool = True,
+                 peak_limit_kw: float | None = None, peak_reserve_kwh: float = 0.0):
         self.grid_limit_kw = grid_limit_kw
+        self.peak_limit_kw = peak_limit_kw
+        self.peak_reserve_kwh = peak_reserve_kwh
         self.anticipate_pv = anticipate_pv
         self.allow_export = allow_export
         self.min_margin_eur_mwh = min_margin_eur_mwh
@@ -100,12 +106,16 @@ class PriceThreshold:
     def __call__(self, i: int, net_kw: float, spot: float, energy_kwh: float, battery) -> float:
         if net_kw < 0:
             return -net_kw  # surplus PV
+        if self.peak_limit_kw is not None and net_kw > self.peak_limit_kw:
+            return -(net_kw - self.peak_limit_kw)  # écrêtage prioritaire, réserve comprise
         if self.worth[i] and spot <= self.low[i]:
             if self.grid_limit_kw is not None:
                 return max(0.0, min(battery.p_max_kw, self.grid_limit_kw - net_kw))
             return battery.p_max_kw
         if spot >= self.high[i]:
-            return -battery.p_max_kw if self.allow_export else -net_kw
+            want = battery.p_max_kw if self.allow_export else net_kw
+            available_kw = max(0.0, energy_kwh - battery.e_min - self.peak_reserve_kwh) * battery.eta / DT_H
+            return -min(want, available_kw)  # l'arbitrage ne touche pas à la réserve d'écrêtage
         return 0.0
 
 

@@ -180,6 +180,21 @@ def test_strategie_prix_anticipe_le_surplus_solaire():
     assert naive["pv_export_kw"].sum() > r["pv_export_kw"].sum()
 
 
+def test_cumul_prix_et_ecretage_avec_reserve():
+    # soir cher (18–20 h) PUIS pointe de 30 kW à 21 h (limite 20 kW) : 1 h × 10 kW = 10 kWh à écrêter
+    load = by_hour({(21, 22): 30.0}, default=5.0)
+    spot = by_hour({(0, 6): 20.0, (18, 20): 200.0}, default=80.0)
+    b = Battery(40, soc_init=0.1)  # 32 kWh utiles, P_max 20 kW
+    seul_prix = simulate.run(load, None, b, PriceThreshold(grid_limit_kw=20), spot)
+    cumul = simulate.run(load, None, b, PriceThreshold(grid_limit_kw=20, peak_limit_kw=20, peak_reserve_kwh=12), spot)
+    simulate.check_balance(cumul, b)
+    assert seul_prix["grid_kw"].max() == pytest.approx(30)  # sans priorité, la pointe passe
+    assert cumul["grid_kw"].max() == pytest.approx(20)  # avec priorité + réserve, elle est écrêtée
+    # l'arbitrage du soir a laissé au moins la réserve : énergie à 21 h ≥ E_min + réserve
+    t21 = cumul.index[cumul.index.tz_convert("Europe/Paris").hour == 21][0]
+    assert cumul["energy_kwh"].shift(1)[t21] >= b.e_min + 12 - 1e-6
+
+
 def test_strategie_prix_respecte_la_limite_reseau():
     load = by_hour({}, default=2.0)
     spot = by_hour({(0, 6): 20.0, (18, 22): 200.0}, default=80.0)
