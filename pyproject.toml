@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simu-energie"
+version = "0.1.0"
+description = "Simulateur technico-économique : consommation, PV, batterie, achat/vente au prix de marché."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas>=2.0",
+    "pyyaml",
+    "requests",
+    "truststore",  # certificats du système (proxy d'entreprise) pour les appels HTTPS
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+simu = "simu.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["network: appelle les API réelles (Energy-Charts, ODRÉ) ; lancer avec -m network"]
+addopts = "-m 'not network'"
