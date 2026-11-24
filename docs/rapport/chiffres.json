@@ -19,6 +19,115 @@
   "spread_hiver_median": 79.25,
   "spread_ete_median": 99.54
  },
+ "e0_jour_record": {
+  "jour": "2025-01-20",
+  "spread": 358.87,
+  "prix_max_fr": 473.28,
+  "heure_max": "18:00",
+  "prix_min_fr": 114.41,
+  "prix_de_a_l_heure_max": 473.28,
+  "prix_max_de": 583.4,
+  "vent_fr_jour_gw": 1.82,
+  "vent_fr_mois_gw": 7.7,
+  "vent_de_jour_gw": 4.89,
+  "vent_de_mois_gw": 20.68,
+  "conso_fr_jour_gw": 74.01,
+  "conso_fr_mois_gw": 65.76,
+  "conso_de_jour_gw": 63.28,
+  "conso_de_mois_gw": 59.37,
+  "gaz_fr_jour_gw": 7.4,
+  "gaz_fr_mois_gw": 3.95,
+  "echanges_fr_jour_gw": -5.38
+ },
+ "e0_top_spreads": {
+  "2025-01-20": {
+   "spread": 358.87,
+   "min": 114.41,
+   "max": 473.28
+  },
+  "2025-05-01": {
+   "spread": 197.13,
+   "min": -118.01,
+   "max": 79.12
+  },
+  "2025-04-06": {
+   "spread": 195.46,
+   "min": -115.46,
+   "max": 80.0
+  },
+  "2025-06-22": {
+   "spread": 193.37,
+   "min": -78.05,
+   "max": 115.32
+  },
+  "2025-03-31": {
+   "spread": 174.48,
+   "min": -0.01,
+   "max": 174.47
+  },
+  "2025-11-26": {
+   "spread": 173.53,
+   "min": 58.88,
+   "max": 232.41
+  }
+ },
+ "e0_negatifs": {
+  "h_neg": 509.25,
+  "h_nul": 233.0,
+  "jours_avec_neg": 97,
+  "par_mois_neg": {
+   "Jan": 0.0,
+   "Feb": 0.0,
+   "Mar": 10.0,
+   "Apr": 90.0,
+   "May": 133.0,
+   "Jun": 130.0,
+   "Jul": 7.0,
+   "Aug": 66.0,
+   "Sep": 57.0,
+   "Oct": 15.75,
+   "Nov": 0.25,
+   "Dec": 0.25
+  },
+  "par_mois_nul": {
+   "Jan": 0.0,
+   "Feb": 0.0,
+   "Mar": 3.0,
+   "Apr": 31.0,
+   "May": 47.0,
+   "Jun": 39.0,
+   "Jul": 23.0,
+   "Aug": 21.0,
+   "Sep": 51.0,
+   "Oct": 13.25,
+   "Nov": 1.75,
+   "Dec": 3.0
+  },
+  "part_10h_17h": 0.87,
+  "h_neg_nuit_avant8_apres20": 35.75,
+  "part_weekend": 0.49,
+  "prix_neg_median": -0.06,
+  "prix_neg_moyen": -6.52,
+  "h_sous_moins_5": 108.0,
+  "h_entre_moins_01_et_0": 282.0,
+  "plus_bas": {
+   "2025-05-01 14:00": -118.01
+  },
+  "jours_plus_de_h_neg": {
+   "2025-06-05": 16.0,
+   "2025-08-05": 14.0,
+   "2025-09-07": 13.0,
+   "2025-05-25": 10.0,
+   "2025-06-03": 10.0
+  },
+  "pires_jours": {
+   "2025-05-01 (Thu)": -118.01,
+   "2025-04-06 (Sun)": -115.46,
+   "2025-05-10 (Sat)": -111.18,
+   "2025-05-11 (Sun)": -109.84,
+   "2025-06-22 (Sun)": -78.05
+  }
+ },
  "e1": {
   "studio_kwh_jour": 10.34,
   "par_appareil": {

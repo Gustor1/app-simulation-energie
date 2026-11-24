@@ -82,7 +82,8 @@ UTC (minuit à Paris = 23 h UTC en novembre). Le cœur du simulateur ne verra ja
 | Indicateur 2025 | Valeur |
 |---|---|
 | Spot moyen | **61,1 €/MWh** (min −118, max 473) |
-| Heures à prix négatif / ≤ 0 | **509 h** / 742 h |
+| Heures à prix négatif (< 0) sur l'année | **509 h**, réparties sur 97 jours (détail plus bas) |
+| Heures à prix exactement nul (= 0) | **233 h** (soit 742 h à prix ≤ 0) |
 | Spread journalier (max − min) | médiane **92 €/MWh**, moyenne 95 |
 | Jours avec un spread entre 80 et 180 €/MWh | **64 %** (35 % en dessous, 1 % au-dessus) |
 | Spread médian hiver / été | 79 / 100 €/MWh |
@@ -94,6 +95,91 @@ UTC (minuit à Paris = 23 h UTC en novembre). Le cœur du simulateur ne verra ja
   solaire inonde le marché) et pics le matin et le soir. C'est exactement le creux que le PV
   subit et que la batterie peut exploiter.
 - Le spread est plus grand **l'été** (100) que l'hiver (79) : il est porté par le solaire.
+
+### Zoom : le jour record du lundi 20 janvier 2025 (spread de 359 €/MWh)
+
+Ce sont bien des **données réelles** : les prix day-ahead (fixés la veille) de la zone de prix France,
+récupérés par l'API Energy-Charts (source citée par l'API : Bundesnetzagentur | SMARD.de). Le pic visible en janvier sur le graphique du spread est
+**un seul jour**, le lundi 20/01/2025 : de **114 €/MWh à 3 h** à **473 €/MWh de 18 h à 19 h**.
+Les 5 jours suivants du classement ont tous un spread inférieur à 200 €/MWh. Trois d'entre eux sont des
+jours à prix très négatifs (1er mai, 6 avril, 22 juin : jusqu'à −118 €/MWh), pas des jours à prix très hauts.
+
+![Jour record](fig/e0_jour_record.png)
+
+> 📊 **Comment lire :** À gauche, le prix heure par heure le 20/01/2025, en France (violet) et en
+> Allemagne (pointillés rouges). Au centre et à droite, pour chaque jour autour du 20/01 : la
+> production des éoliennes (barres, la rouge = le 20/01) et la consommation (ligne, axe de droite),
+> en France puis en Allemagne. Le 20/01, il n'y a presque pas de vent alors que la consommation est forte.
+
+| 20/01/2025 | Ce jour-là | Moyenne de janvier |
+|---|---|---|
+| Vent en France | **1,8 GW** | 7,7 GW |
+| Vent en Allemagne | **4,9 GW** | 20,7 GW |
+| Consommation France | **74 GW** | 66 GW |
+| Consommation Allemagne | 63 GW | 59 GW |
+| Centrales à gaz en France | **7,4 GW** | 4,0 GW |
+| Prix France / Allemagne à 18 h | **473 / 473 €/MWh** | – |
+
+**Pourquoi ce pic ?** Ce que les données montrent :
+1. **Froid, pas de vent et nuit tombée :** un lundi d'hiver, avec une consommation élevée en France et en Allemagne, et
+   des éoliennes presque à l'arrêt **des deux côtés du Rhin** (4 fois moins de vent que d'habitude en
+   Allemagne). À 18 h, le solaire est à zéro. Les Allemands appellent ce type de situation
+   *Dunkelflaute* (« calme sombre »).
+2. **Le prix européen tire le prix français :** les marchés européens sont couplés. À 18 h, la
+   France et l'Allemagne ont **exactement le même prix (473,28 €)**, alors que la France est
+   **exportatrice** (5,4 GW d'exports en moyenne ce jour-là). Quand les lignes d'interconnexion sont saturées, les prix
+   se séparent : à 17 h, 583 € en Allemagne contre 276 € en France.
+3. **Les centrales les plus chères fixent le prix :** sur ce marché, le prix de l'heure est celui de la
+   dernière centrale appelée pour satisfaire la demande. Pour passer la pointe de 18 h, il faut appeler des
+   centrales coûteuses : le gaz produit presque deux fois plus que d'habitude en France ce jour-là.
+
+*Limite :* les données confirment le vent, la consommation, le gaz et le couplage des prix. Je n'ai pas
+vérifié les autres causes possibles (indisponibilités de centrales, prix du gaz ce jour-là).
+
+**Pour le projet :** un tel jour est idéal pour une batterie (acheter à 114 €, revendre à 473 €), mais
+il est **unique dans l'année**. On ne peut pas bâtir une rentabilité sur ce genre d'événement.
+
+### Zoom : les heures à prix négatif ou nul
+
+**Comment est compté « 509 h » :** les prix sont publiés par quart d'heure (par heure avant octobre 2025). J'additionne
+tous les quarts d'heure de 2025 où le prix est **strictement négatif**, puis je convertis en heures
+(4 quarts d'heure = 1 h). Ces 509 h ne sont **pas consécutives** : elles sont réparties sur **97 jours
+différents**. S'y ajoutent **233 h à prix exactement nul**.
+
+![Heures négatives](fig/e0_heures_negatives.png)
+
+> 📊 **Comment lire :** Les heures à prix négatif de 2025, découpées de quatre façons. En haut à gauche,
+> par mois (bleu : prix négatif ; gris : prix exactement nul). En haut à droite, par heure de la journée.
+> En bas à gauche, par niveau de prix : la grande majorité est juste sous zéro. En bas à droite, par jour
+> de la semaine (rouge : week-end).
+
+| Question | Réponse (2025) |
+|---|---|
+| **Quels mois ?** | **avril à juin** (353 h sur 509) puis août–septembre (123 h) ; **aucune** de novembre à février |
+| **Quelles heures ?** | **87 %** entre 10 h et 17 h, pic vers 14 h ; seulement 36 h la nuit |
+| **Quels jours ?** | **49 %** le samedi ou le dimanche (alors que le week-end ne représente que 28 % des jours) ; le prix le plus bas est tombé un **jour férié** (jeudi 1er mai, −118 €/MWh) |
+| **Quel niveau ?** | **très faible la plupart du temps** : prix médian −0,06 €/MWh ; 282 h entre −0,1 et 0 €/MWh ; seulement **108 h sous −5 €/MWh** et 17 h sous −50 €/MWh |
+| **Jours les plus touchés** | 05/06 (16 h), 05/08 (14 h), 07/09 (13 h), 25/05 et 03/06 (10 h) |
+
+**Pourquoi ?** Un prix négatif veut dire que des producteurs **paient pour continuer à produire**.
+Cela arrive quand la production qu'on ne peut ou ne veut pas arrêter dépasse ce que le marché absorbe :
+- **beaucoup de soleil** (milieu de journée, printemps–été) : le parc solaire français a gagné
+  environ 5 GW en un an (voir § PV) ;
+- **peu de consommation** : week-ends, jours fériés, pas de chauffage au printemps ;
+- **des centrales qu'on ne peut pas ou ne veut pas arrêter** : le nucléaire et l'hydraulique au fil de l'eau
+  ne peuvent pas baisser autant ni aussi vite que nécessaire ; selon leur contrat de soutien, certains
+  producteurs renouvelables n'ont pas intérêt à s'arrêter *(mécanismes non vérifiés en détail ici)* ;
+- **des voisins dans la même situation** (Allemagne, Espagne : beaucoup de solaire aussi), donc
+  l'export ne suffit pas à écouler le surplus.
+
+*Hypothèses non vérifiées dans les données :* les 282 h « à peine négatives » (entre −0,1 et 0) viennent
+probablement d'offres placées juste sous zéro par certains producteurs ; le creux de juillet (7 h seulement)
+n'est pas expliqué ici (consommation de climatisation ? moins de nucléaire disponible ?). Il faudrait regarder les données de production en détail.
+
+**Pour le projet :** les prix négatifs tombent **exactement quand les panneaux produisent le plus**.
+1. Le surplus solaire revendu au spot ne vaut presque rien à ces heures-là (14 €/MWh en moyenne pour la PME, § 3).
+2. Une batterie peut s'y **charger gratuitement, voire en étant payée**, pour restituer le soir.
+3. Mais en volume, ces heures restent rares (≈ 6 % de l'année) et souvent à peine négatives.
 
 ### Production PV : deux sources comparées
 

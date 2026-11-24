@@ -106,6 +106,126 @@ N["e0"] = {
     "spread_ete_median": eur(spread[spread.index.month.isin([6, 7, 8])].median()),
 }
 
+
+# --- Zoom : le jour record (spread le plus élevé) ---------------------------------------
+def public_power(country, start, end):
+    from simu.adapters._http import get_json
+
+    d = get_json(energy_charts.BASE_URL + "/public_power", {"country": country, "start": start, "end": end})
+    idx = pd.to_datetime(d["unix_seconds"], unit="s", utc=True).tz_convert(TZ)
+    return pd.DataFrame({p["name"]: p["data"] for p in d["production_types"]}, index=idx).astype(float) / 1000  # GW
+
+
+record_day = spread.idxmax()
+rd = record_day.strftime("%Y-%m-%d")
+m0 = record_day.replace(day=1).strftime("%Y-%m-%d")
+m1 = (record_day.replace(day=1) + pd.offsets.MonthEnd(0)).strftime("%Y-%m-%d")
+fr_pp, de_pp = public_power("fr", m0, m1), public_power("de", m0, m1)
+de_spot = energy_charts.load_spot(rd, rd, bzn="DE-LU")["spot_eur_mwh"].tz_convert(TZ)
+fr_day = loc_spot[rd]
+
+
+def wind(df):
+    return df["Wind onshore"] + df.get("Wind offshore", 0)
+
+
+f, (a1, a2, a3) = plt.subplots(1, 3, figsize=(15, 4), gridspec_kw={"width_ratios": [1.4, 1, 1]})
+a1.plot(fr_day.index, fr_day, drawstyle="steps-post", color=C["spot"], lw=2, label="France")
+a1.plot(de_spot.index, de_spot, drawstyle="steps-post", color=C["grid"], lw=1.2, ls="--", label="Allemagne")
+a1.set_ylabel("€/MWh")
+a1.set_title(f"Prix spot du {record_day.strftime('%d/%m/%Y')} (jour record)")
+a1.legend()
+plots._time_axis(a1, 1)
+days = pd.date_range(record_day - pd.Timedelta(days=6), record_day + pd.Timedelta(days=4), freq="D")
+for ax_, pp, name in [(a2, fr_pp, "France"), (a3, de_pp, "Allemagne")]:
+    dw = wind(pp).resample("D").mean().reindex(days)
+    dl = pp["Load"].resample("D").mean().reindex(days)
+    colors_ = [C["grid"] if d_ == record_day else C["bat"] for d_ in days]
+    ax_.bar(days.strftime("%d/%m"), dw, color=colors_, label="vent (moyenne du jour)")
+    ax_.axhline(wind(pp).mean(), color="black", ls=":", lw=1, label=f"vent moyen du mois : {wind(pp).mean():.1f} GW")
+    ax2 = ax_.twinx()
+    ax2.plot(days.strftime("%d/%m"), dl, color=C["load"], marker="o", ms=3, label="consommation")
+    ax2.set_ylabel("consommation (GW)", color=C["load"])
+    ax2.grid(False)
+    ax_.set_ylabel("vent (GW)")
+    ax_.set_title(f"{name} : vent et consommation")
+    ax_.tick_params(axis="x", rotation=60, labelsize=7)
+    ax_.legend(loc="upper left", fontsize=7)
+f.tight_layout(w_pad=3)
+fig("e0_jour_record", f)
+
+N["e0_jour_record"] = {
+    "jour": rd,
+    "spread": eur(spread.max()),
+    "prix_max_fr": eur(fr_day.max()),
+    "heure_max": fr_day.idxmax().strftime("%H:%M"),
+    "prix_min_fr": eur(fr_day.min()),
+    "prix_de_a_l_heure_max": eur(de_spot.reindex([fr_day.idxmax()]).iloc[0]),
+    "prix_max_de": eur(de_spot.max()),
+    "vent_fr_jour_gw": eur(wind(fr_pp)[rd].mean()), "vent_fr_mois_gw": eur(wind(fr_pp).mean()),
+    "vent_de_jour_gw": eur(wind(de_pp)[rd].mean()), "vent_de_mois_gw": eur(wind(de_pp).mean()),
+    "conso_fr_jour_gw": eur(fr_pp["Load"][rd].mean()), "conso_fr_mois_gw": eur(fr_pp["Load"].mean()),
+    "conso_de_jour_gw": eur(de_pp["Load"][rd].mean()), "conso_de_mois_gw": eur(de_pp["Load"].mean()),
+    "gaz_fr_jour_gw": eur(fr_pp["Fossil gas"][rd].mean()), "gaz_fr_mois_gw": eur(fr_pp["Fossil gas"].mean()),
+    "echanges_fr_jour_gw": eur(fr_pp["Cross border electricity trading"][rd].mean()),
+}
+top_spreads = spread.nlargest(6)
+N["e0_top_spreads"] = {d_.strftime("%Y-%m-%d"): {"spread": eur(v), "min": eur(loc_spot[d_.strftime("%Y-%m-%d")].min()),
+                                                  "max": eur(loc_spot[d_.strftime("%Y-%m-%d")].max())} for d_, v in top_spreads.items()}
+
+# --- Zoom : heures à prix négatif ou nul --------------------------------------------------
+q = standard.DT_H
+neg_mask, zero_mask = loc_spot < 0, loc_spot == 0
+f, axes = plt.subplots(2, 2, figsize=(13, 7.5))
+a1, a2, a3, a4 = axes.ravel()
+months = pd.date_range("2025-01-01", periods=12, freq="MS").strftime("%b")
+hn = neg_mask.groupby(loc_spot.index.month).sum().reindex(range(1, 13), fill_value=0) * q
+hz = zero_mask.groupby(loc_spot.index.month).sum().reindex(range(1, 13), fill_value=0) * q
+a1.bar(months, hn, color=C["grid_after"], label="prix < 0")
+a1.bar(months, hz, bottom=hn, color=C["neutral"], label="prix = 0 exactement")
+a1.set_ylabel("heures dans le mois")
+a1.set_title("Quand ? Par mois")
+a1.legend()
+hh = neg_mask.groupby(loc_spot.index.hour).sum() * q
+a2.bar(hh.index, hh, color=C["grid_after"])
+a2.set_xlabel("heure de la journée")
+a2.set_ylabel("heures à prix < 0 sur l'année")
+a2.set_title("À quelle heure ? (prix < 0)")
+a2.set_xticks(range(0, 24, 3))
+neg_vals = loc_spot[neg_mask]
+bins = [-125, -50, -20, -5, -1, -0.1, 0]
+labels_ = ["< −50", "−50 à −20", "−20 à −5", "−5 à −1", "−1 à −0,1", "−0,1 à 0"]
+cnt = pd.cut(neg_vals, bins=bins, labels=labels_, right=False).value_counts().reindex(labels_) * q
+a3.bar(labels_, cnt, color=C["grid_after"])
+for i_, v in enumerate(cnt):
+    a3.text(i_, v, f"{v:.0f} h", ha="center", va="bottom", fontsize=8)
+a3.set_xlabel("prix (€/MWh)")
+a3.set_ylabel("heures")
+a3.set_title("À quel niveau ? (prix < 0)")
+a3.tick_params(axis="x", labelsize=8)
+dow = neg_mask.groupby(loc_spot.index.dayofweek).sum() * q
+a4.bar(["lun", "mar", "mer", "jeu", "ven", "sam", "dim"], dow, color=[C["grid_after"]] * 5 + [C["grid"]] * 2)
+a4.set_ylabel("heures à prix < 0 sur l'année")
+a4.set_title("Quel jour de la semaine ?")
+f.suptitle(f"Prix spot France 2025 : {neg_mask.sum() * q:.0f} h à prix négatif + {zero_mask.sum() * q:.0f} h à prix nul", fontweight="bold")
+f.tight_layout()
+fig("e0_heures_negatives", f)
+
+neg_days = neg_mask.groupby(loc_spot.index.date).sum() * q
+N["e0_negatifs"] = {
+    "h_neg": eur(neg_mask.sum() * q), "h_nul": eur(zero_mask.sum() * q),
+    "jours_avec_neg": int((neg_days > 0).sum()),
+    "par_mois_neg": {m: eur(v) for m, v in zip(months, hn)}, "par_mois_nul": {m: eur(v) for m, v in zip(months, hz)},
+    "part_10h_17h": eur(((neg_mask) & (loc_spot.index.hour >= 10) & (loc_spot.index.hour < 17)).sum() / neg_mask.sum()),
+    "h_neg_nuit_avant8_apres20": eur((neg_mask & ((loc_spot.index.hour < 8) | (loc_spot.index.hour >= 20))).sum() * q),
+    "part_weekend": eur((neg_vals.index.dayofweek >= 5).mean()),
+    "prix_neg_median": eur(neg_vals.median()), "prix_neg_moyen": eur(neg_vals.mean()),
+    "h_sous_moins_5": eur((neg_vals < -5).sum() * q), "h_entre_moins_01_et_0": eur((neg_vals >= -0.1).sum() * q),
+    "plus_bas": {t.strftime("%Y-%m-%d %H:%M"): eur(v) for t, v in neg_vals.nsmallest(1).items()},
+    "jours_plus_de_h_neg": {str(k): eur(v) for k, v in neg_days.nlargest(5).items()},
+    "pires_jours": {d_.strftime("%Y-%m-%d (%a)"): eur(v) for d_, v in loc_spot.resample("D").min().nsmallest(5).items()},
+}
+
 # =====================================================================================
 # Étape 1 – conso bottom-up
 # =====================================================================================
