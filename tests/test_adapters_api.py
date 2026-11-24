@@ -20,6 +20,11 @@ def fixture(name):
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
+@pytest.fixture(autouse=True)
+def no_throttle(monkeypatch):
+    monkeypatch.setattr(_http, "MIN_INTERVAL_S", 0.0)
+
+
 @pytest.fixture
 def fake_api(monkeypatch):
     def fake_get_json(url, params=None, **kwargs):
@@ -82,6 +87,9 @@ def test_cache_http(tmp_path, monkeypatch):
     calls = []
 
     class FakeResponse:
+        status_code = 200
+        headers = {}
+
         def raise_for_status(self):
             pass
 
@@ -115,6 +123,35 @@ def test_retries_puis_erreur(tmp_path, monkeypatch):
         _http.get_json("https://x/y", cache_dir=tmp_path, retries=3, backoff_s=0)
     assert FailingSession.n == 3
     assert not list(tmp_path.glob("*.json"))  # rien en cache après un échec
+
+
+def test_limite_de_debit_429_puis_succes(tmp_path, monkeypatch):
+    import requests
+
+    sleeps = []
+    monkeypatch.setattr(_http.time, "sleep", lambda s: sleeps.append(s))
+
+    class Response:
+        def __init__(self, code):
+            self.status_code = code
+            self.headers = {"Retry-After": "7"} if code == 429 else {}
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise requests.HTTPError(str(self.status_code))
+
+        def json(self):
+            return {"ok": 1}
+
+    codes = iter([429, 200])
+
+    class Session:
+        def get(self, *a, **k):
+            return Response(next(codes))
+
+    monkeypatch.setattr(_http, "_session", lambda: Session())
+    assert _http.get_json("https://x/z", cache_dir=tmp_path) == {"ok": 1}
+    assert 7 in sleeps  # Retry-After respecté
 
 
 # --- réseau --------------------------------------------------------------------------

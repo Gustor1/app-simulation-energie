@@ -75,9 +75,50 @@ def cost_bloc_spot(
     return Cost("bloc_spot", float(p_grid_kw.sum() * DT_H), bloc_eur + details["spot_eur"], details)
 
 
+def overrun_penalty(
+    p_grid_kw: pd.Series, subscribed_kw: float, eur_per_kw: float, tz: str = "Europe/Paris"
+) -> dict:
+    """Pénalité de dépassement de la puissance souscrite.
+
+    Hypothèse simplifiée (à valider) : chaque mois, pénalité = €/kW × dépassement maximal du mois
+    (sur les moyennes 15 min). Les vrais tarifs (TURPE, CMDPS) sont plus détaillés.
+    """
+    monthly_peak = p_grid_kw.tz_convert(tz).resample("MS").max()
+    overrun = (monthly_peak - subscribed_kw).clip(lower=0)
+    return {
+        "pointe_kw": float(p_grid_kw.max()),
+        "depassement_max_kw": float(overrun.max()),
+        "mois_en_depassement": int((overrun > 0).sum()),
+        "penalite_eur": float(overrun.sum() * eur_per_kw),
+        "pas_en_depassement": int((p_grid_kw > subscribed_kw + 1e-9).sum()),
+    }
+
+
 def cost(p_grid_kw: pd.Series, spot_eur_mwh: pd.Series | None, offer: dict) -> Cost:
-    """Coût pour une offre décrite comme dans le scénario YAML (``type`` + paramètres)."""
+    """Coût pour une offre décrite comme dans le scénario YAML (``type`` + paramètres).
+
+    ``export_price_eur_mwh`` (optionnel) : l'énergie injectée est payée à ce prix fixe
+    (ex. 11 €/MWh, rachat du surplus) au lieu du spot / du prix de l'offre.
+    ``import_surcharge_eur_mwh`` (optionnel, défaut 0) : coût ajouté à chaque kWh SOUTIRÉ
+    (acheminement, taxes…), que l'autoconsommation évite. Aucune valeur par défaut n'est
+    supposée : à renseigner selon le contrat du client.
+    """
+    surcharge = offer.get("import_surcharge_eur_mwh")
+    if surcharge:
+        base = cost(p_grid_kw, spot_eur_mwh, {k: v for k, v in offer.items() if k != "import_surcharge_eur_mwh"})
+        import_kwh = float(p_grid_kw.clip(lower=0).sum() * DT_H)
+        extra = import_kwh * surcharge / 1000
+        return Cost(base.offer, base.energy_kwh, base.total_eur + extra, {**base.details, "surcout_import_eur": extra})
     kind = offer.get("type")
+    export_price = offer.get("export_price_eur_mwh")
+    if export_price is not None:
+        if kind == "bloc_spot":
+            raise ValueError("export_price_eur_mwh non géré avec bloc_spot (l'excédent est revendu au spot)")
+        base = cost(p_grid_kw.clip(lower=0), spot_eur_mwh, {k: v for k, v in offer.items() if k != "export_price_eur_mwh"})
+        export_kwh = float((-p_grid_kw.clip(upper=0)).sum() * DT_H)
+        revenue = export_kwh * export_price / 1000
+        details = {**base.details, "achat_eur": base.total_eur, "revente_kwh": export_kwh, "revente_eur": revenue}
+        return Cost(base.offer, float(p_grid_kw.sum() * DT_H), base.total_eur - revenue, details)
     if kind == "spot":
         return cost_spot(p_grid_kw, spot_eur_mwh)
     if kind == "fixed":

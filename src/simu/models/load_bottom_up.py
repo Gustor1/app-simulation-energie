@@ -5,7 +5,8 @@ Simulation à la minute (heure locale), puis moyenne au pas de 15 min (format st
 Types d'appareils :
 - ``cyclic``    : cycles réguliers (ex. réfrigérateur : 400 W, 7 min, 2×/h) ; aléa = instant
                   de démarrage de chaque cycle dans sa fenêtre (60 / cycles_par_heure minutes).
-- ``schedule``  : marche fixe sur des plages horaires (ex. TV 18 h–23 h).
+- ``schedule``  : marche fixe sur des plages horaires (ex. TV 18 h–23 h), option ``days``
+                  (jours de la semaine actifs, 0 = lundi).
 - ``daily_run`` : une marche par jour de durée fixe (ex. lave-linge 2 h) ; aléa = heure de
                   démarrage, tirée uniformément pour que la marche tienne dans [earliest_h, latest_end_h].
 - ``heating``   : E_jour = k × (consigne − T_moyenne_jour) si T_moyenne_jour < seuil, sinon 0 ;
@@ -20,6 +21,12 @@ import numpy as np
 import pandas as pd
 
 from simu import standard
+
+
+def _active_days(clock: pd.DatetimeIndex, days) -> np.ndarray:
+    if days is None:
+        return np.ones(len(clock))
+    return np.isin(clock.dayofweek, list(days)).astype(float)
 
 
 @dataclass
@@ -47,13 +54,14 @@ class Schedule:
     name: str
     power_w: float
     windows: list[tuple[float, float]]  # [(début_h, fin_h), ...] en heure locale, fin exclue
+    days: list[int] | None = None  # jours actifs (0 = lundi … 6 = dimanche) ; défaut : tous
 
     def minutes_w(self, clock: pd.DatetimeIndex, rng: np.random.Generator) -> np.ndarray:
         hour = clock.hour + clock.minute / 60
         on = np.zeros(len(clock), dtype=bool)
         for h0, h1 in self.windows:
             on |= (hour >= h0) & (hour < h1)
-        return on * float(self.power_w)
+        return on * _active_days(clock, self.days) * float(self.power_w)
 
 
 @dataclass
@@ -63,6 +71,7 @@ class DailyRun:
     duration_h: float
     earliest_h: float = 0.0
     latest_end_h: float = 24.0
+    days: list[int] | None = None  # jours actifs (0 = lundi … 6 = dimanche) ; défaut : tous
 
     def minutes_w(self, clock: pd.DatetimeIndex, rng: np.random.Generator) -> np.ndarray:
         duration_min = round(self.duration_h * 60)
@@ -76,7 +85,7 @@ class DailyRun:
             start = rng.integers(first, last + 1)
             mask = (days == day) & (minute_of_day >= start) & (minute_of_day < start + duration_min)
             out[mask] = self.power_w
-        return out
+        return out * _active_days(clock, self.days)
 
 
 @dataclass

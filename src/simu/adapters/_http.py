@@ -40,6 +40,17 @@ def _session() -> requests.Session:
     return session
 
 
+MIN_INTERVAL_S = 1.0  # délai minimal entre deux appels réseau (politesse envers les API)
+_last_call = [0.0]
+
+
+def _throttle() -> None:
+    wait = _last_call[0] + MIN_INTERVAL_S - time.monotonic()
+    if wait > 0:
+        time.sleep(wait)
+    _last_call[0] = time.monotonic()
+
+
 def cache_path(url: str, params: dict, cache_dir: Path) -> Path:
     key = json.dumps({"url": url, "params": params}, sort_keys=True)
     digest = hashlib.sha256(key.encode()).hexdigest()[:16]
@@ -53,7 +64,7 @@ def get_json(
     *,
     cache_dir: Path | str | None = DEFAULT_CACHE_DIR,
     timeout: float = 60,
-    retries: int = 3,
+    retries: int = 5,
     backoff_s: float = 5,
 ):
     """GET JSON. Lit le cache s'il existe ; sinon interroge l'API et écrit le cache.
@@ -68,15 +79,20 @@ def get_json(
     session = _session()
     last_error: Exception | None = None
     for attempt in range(1, retries + 1):
+        _throttle()
+        wait = backoff_s * attempt
         try:
             response = session.get(url, params=params, timeout=timeout)
+            if response.status_code == 429:  # limite de débit : on respecte Retry-After
+                retry_after = response.headers.get("Retry-After", "")
+                wait = float(retry_after) if retry_after.isdigit() else max(wait, 30 * attempt * (backoff_s > 0))
             response.raise_for_status()
             data = response.json()
             break
         except (requests.RequestException, ValueError) as exc:
             last_error = exc
             if attempt < retries:
-                time.sleep(backoff_s * attempt)
+                time.sleep(wait)
     else:
         raise ConnectionError(f"échec après {retries} tentatives : {url} {params}") from last_error
 

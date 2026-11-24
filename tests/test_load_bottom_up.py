@@ -77,6 +77,13 @@ def test_studio_environ_10_kwh_par_jour():
     assert kwh.mean() == pytest.approx(10, rel=0.05)
 
 
+def test_jours_ouvres():
+    # semaine du lundi 16/11/2026 : 40 kW de 8 h à 18 h du lundi au vendredi
+    bureaux = lb.Schedule("bureaux", 40_000, [(8, 18)], days=[0, 1, 2, 3, 4])
+    kwh = daily_kwh([bureaux], "2026-11-16", "2026-11-22")
+    assert list(kwh) == pytest.approx([400] * 5 + [0, 0])
+
+
 def test_erreurs_de_configuration():
     with pytest.raises(ValueError, match="fenêtre"):
         lb.simulate([lb.Cyclic("x", 100, 40, 2)], DAY, DAY)
