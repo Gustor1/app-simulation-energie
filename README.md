@@ -29,6 +29,16 @@ DataFrame pandas, index UTC au pas de 15 min, colonnes `load_kw` (kW), `pv_cf` (
 
 Les réponses des API sont mises en cache dans `data/cache/`. Constats sur les sources : `docs/sources_donnees.md`.
 
+## Lancer un scénario
+
+```bash
+python -m simu run scenarios/exemple_bloc_spot.yaml   # exemple chiffré de la fiche bloc + spot (270 €)
+python -m simu run scenarios/studio.yaml              # studio bottom-up + prix spot réels
+```
+
+État actuel (étapes 0 à 2) : consommation seule (bottom-up ou CSV) et coût d'achat sans équipement
+(spot pur, prix fixe, bloc + spot). PV et batterie : étapes suivantes.
+
 ## Tests
 
 ```bash

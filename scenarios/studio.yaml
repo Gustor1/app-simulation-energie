@@ -1,9 +1,11 @@
 # Studio fictif (particulier) – appareils de PLAN_SIMULATION.md, section 4.2.
 # Hypothèses de composition (inventées, à valider) : lave-vaisselle et lave-linge
 # tournent une fois par jour ; pas de chauffage (température non renseignée).
+# Période : semaine complète. (Le 21/11/2026, Energy-Charts publie des prix vides pour
+# toute la journée : le simulateur refuse alors de calculer plutôt que de combler le trou.)
 period:
-  start: 2026-11-16
-  end: 2026-11-22          # inclus
+  start: 2026-11-09
+  end: 2026-11-15          # inclus
   timezone: Europe/Paris
 
 site:

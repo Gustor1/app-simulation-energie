@@ -1,0 +1,8 @@
+# Mapping de data/exemple_bloc_spot.csv vers le format standard
+sep: ";"
+timestamp:
+  column: heure
+  timezone: Europe/Paris
+columns:
+  load_kw: {column: conso_kw}
+  spot_eur_mwh: {column: spot_eur_mwh}
