@@ -1,0 +1,27 @@
+# Studio fictif (particulier) – appareils de PLAN_SIMULATION.md, section 4.2.
+# Hypothèses de composition (inventées, à valider) : lave-vaisselle et lave-linge
+# tournent une fois par jour ; pas de chauffage (température non renseignée).
+period:
+  start: 2026-11-16
+  end: 2026-11-22          # inclus
+  timezone: Europe/Paris
+
+site:
+  adapter: bottom_up
+  seed: 42
+  appliances:
+    - {type: cyclic,    name: refrigerateur,  power_w: 400,  on_minutes: 7, cycles_per_hour: 2}
+    - {type: schedule,  name: tv,             power_w: 100,  windows: [[18, 23]]}
+    - {type: schedule,  name: eclairage,      power_w: 200,  windows: [[7, 9], [17, 23]]}
+    - {type: daily_run, name: lave_vaisselle, power_w: 1000, duration_h: 2, earliest_h: 19, latest_end_h: 24}
+    - {type: daily_run, name: lave_linge,     power_w: 2000, duration_h: 2, earliest_h: 8,  latest_end_h: 22}
+
+market:
+  prices:
+    adapter: energy_charts   # ou csv_generic (path + mapping)
+    bzn: FR
+  offers:
+    - {type: spot}
+    - {type: fixed, price_eur_mwh: 80}
+    # bloc fictif à l'échelle d'un studio (les vrais blocs font 0,5 à 1 MW)
+    - {type: bloc_spot, bloc_kw: 0.3, bloc_price_eur_mwh: 80}
