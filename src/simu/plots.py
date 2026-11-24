@@ -308,15 +308,16 @@ def pv_profiles(pv_cf: pd.DataFrame, title="Facteur de charge PV national par mo
     return fig
 
 
-def energy_flows(summary_before: dict, summary_after: dict, title="Bilan énergétique annuel"):
+def energy_flows(summary_before: dict, summary_after: dict, title="Bilan énergétique annuel",
+                 names=("sans équipement", "avec équipement")):
     labels = ["conso", "PV produit", "achat réseau", "revente", "pertes batterie"]
     keys = ["conso_kwh", "pv_kwh", "achat_reseau_kwh", "revente_reseau_kwh", "pertes_batterie_kwh"]
     b = [summary_before.get(k, 0) for k in keys]
     a = [summary_after.get(k, 0) for k in keys]
     x = np.arange(len(labels))
     fig, ax = plt.subplots(figsize=(9, 3.8))
-    ax.bar(x - 0.2, b, 0.4, color=C["grid"], label="sans équipement")
-    ax.bar(x + 0.2, a, 0.4, color=C["grid_after"], label="avec équipement")
+    ax.bar(x - 0.2, b, 0.4, color=C["grid"], label=names[0])
+    ax.bar(x + 0.2, a, 0.4, color=C["grid_after"], label=names[1])
     for xi, v in zip(x + 0.2, a):
         ax.text(xi, v, f"{_n(v)}", ha="center", va="bottom", fontsize=8)
     ax.set_xticks(x)

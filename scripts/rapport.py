@@ -287,7 +287,7 @@ simulate.check_balance(r_st_bat, bat5)
 fig("e4_studio_batterie_semaine", plots.battery_use(r_st_bat, "2025-06-02", 7, "Studio 3 kWc + 5 kWh, règle « surplus PV » – juin"))
 fig("e4_studio_batterie_hiver", plots.battery_use(r_st_bat, "2025-01-13", 7, "Studio 3 kWc + 5 kWh, règle « surplus PV » – janvier"))
 s_st = {n: simulate.summary(r, b) for n, r, b in [("sans", r_st_none, None), ("pv", r_st_pv, None), ("pv_bat", r_st_bat, bat5)]}
-fig("e4_studio_bilan", plots.energy_flows(s_st["pv"], s_st["pv_bat"], "Studio 3 kWc : sans batterie / avec 5 kWh (2025)"))
+fig("e4_studio_bilan", plots.energy_flows(s_st["pv"], s_st["pv_bat"], "Studio 3 kWc : sans batterie / avec 5 kWh (2025)", names=("PV 3 kWc sans batterie", "PV 3 kWc + batterie 5 kWh")))
 # vérification de conservation
 f, ax = plt.subplots(figsize=(9, 3.4))
 e_check = bat5.e_init() + (bat5.eta * r_st_bat["bat_charge_kw"] - r_st_bat["bat_discharge_kw"] / bat5.eta).cumsum() * standard.DT_H

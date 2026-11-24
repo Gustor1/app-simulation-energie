@@ -16,7 +16,7 @@ Chiffres bruts : [chiffres.json](chiffres.json).
 | Le spread 80–180 €/MWh du plan est-il confirmé ? | **Oui en grande partie** : médiane 92 €/MWh, 64 % des jours entre 80 et 180 ; mais 35 % des jours sont **sous** 80 |
 | Une batterie est-elle rentable **sur l'énergie seule (spot)** ? | **Non** dans nos cas : temps de retour 16 à 30 ans pour une durée de vie d'environ 15 ans |
 | Qu'est-ce qui peut la rendre rentable ? | **Les pénalités de dépassement** (peak shaving) et **les coûts évités sur chaque kWh acheté** (acheminement + taxes, non modélisés par défaut). Ce sont eux qui décident, pas le spread |
-| Le PV est-il rentable ? | Pour la PME : oui avec un prix d'achat bas (12 ans) ; non au prix médian (28 ans) si on ne compte que le spot. Fortement rentable dès qu'on ajoute ~50 €/MWh de coûts évités |
+| Le PV est-il rentable ? | Pour la PME : oui avec un prix d'achat bas (12 ans) ; non au prix médian (28 ans) si on ne compte que le spot. Rentable dès qu'on compte ~50 €/MWh de coûts évités (retour 18 ans), nettement à 100 €/MWh (10,5 ans) |
 
 ⚠️ **Lecture importante :** le coût d'achat simulé est **uniquement le prix de l'énergie** (spot,
 fixe ou bloc + spot), comme dans la fiche bloc + spot. Une vraie facture contient aussi
@@ -24,6 +24,24 @@ l'**acheminement (TURPE)** et des **taxes**, payés sur chaque kWh soutiré et d
 l'autoconsommation. Sans eux, les gains du PV et de la batterie sont **sous-estimés**. J'ai
 ajouté un paramètre (`import_surcharge_eur_mwh`, 0 par défaut) et une analyse de sensibilité
 (§ 7), mais **je n'ai pas fixé de valeur** : elle dépend du contrat du client.
+
+---
+
+## Petit lexique (pour lire les graphiques)
+
+| Terme | Signification |
+|---|---|
+| **kW / kWh** | puissance (à un instant) / énergie (puissance × durée). 1 kW pendant 1 h = 1 kWh |
+| **€/MWh** | prix de l'électricité ; 100 €/MWh = 0,10 €/kWh |
+| **Spot** | prix du marché de gros, différent pour chaque quart d'heure, connu la veille |
+| **Spread** | écart entre le prix le plus haut et le plus bas d'une journée |
+| **kWc** | « kilowatt-crête » : puissance maximale d'une installation de panneaux |
+| **SOC** | niveau de charge de la batterie, en % (gardé ici entre 10 et 90 %) |
+| **Autoconsommation** | part de la production solaire consommée sur place |
+| **Autoproduction** | part de la consommation couverte par le solaire |
+| **Puissance souscrite** | puissance maximale prévue au contrat ; la dépasser coûte une pénalité |
+| **Peak shaving** | utiliser la batterie pour « raboter » les pics de consommation |
+| **Bloc + spot** | contrat où une partie de l'énergie est achetée d'avance à prix fixe, le reste au prix du marché |
 
 ---
 
@@ -44,13 +62,22 @@ ajouté un paramètre (`import_surcharge_eur_mwh`, 0 par défaut) et une analyse
 
 ![CSV générique](fig/e0_csv_generique.png)
 
+> 📊 **Comment lire :** Une journée de consommation fictive lue depuis un fichier CSV. Les points rouges sont les valeurs du fichier (une par heure) ; la ligne bleu foncé est ce que le simulateur en fait (une valeur tous les quarts d'heure). Les deux se superposent : la conversion ne déforme pas les données.
+
+
 **Interprétation.** Le CSV horaire en heure de Paris devient bien 4 quarts d'heure par heure en
 UTC (minuit à Paris = 23 h UTC en novembre). Le cœur du simulateur ne verra jamais que ce format.
 
 ### Prix spot 2025
 
 ![Prix spot 2025](fig/e0_spot_2025.png)
+
+> 📊 **Comment lire :** Prix de l'électricité sur le marché de gros français en 2025 (« spot », en € par MWh). À gauche, chaque jour : la bande violette va du prix le plus bas au plus haut du jour, la ligne donne la moyenne. À droite, le prix moyen à chaque heure de la journée, en hiver (bleu) et en été (jaune) : l'été, le prix s'effondre en milieu de journée à cause du solaire.
+
 ![Spread 2025](fig/e0_spread_2025.png)
+
+> 📊 **Comment lire :** Le « spread » est l'écart entre le prix le plus haut et le plus bas d'une même journée : c'est ce qu'une batterie peut gagner en achetant au creux et en revendant au pic. À gauche, une barre par jour de 2025 ; à droite, combien de jours tombent dans chaque tranche d'écart. La bande jaune est la fourchette 80–180 €/MWh annoncée dans le plan.
+
 
 | Indicateur 2025 | Valeur |
 |---|---|
@@ -71,7 +98,13 @@ UTC (minuit à Paris = 23 h UTC en novembre). Le cœur du simulateur ne verra ja
 ### Production PV : deux sources comparées
 
 ![Profils PV](fig/e0_pv_profils.png)
+
+> 📊 **Comment lire :** À gauche, la production moyenne d'1 kWc de panneaux (kWc = puissance maximale) au cours d'une journée, mois par mois : 0,5 veut dire que le panneau produit la moitié de sa puissance maximale. À droite, l'énergie produite chaque mois par 1 kWc, selon deux sources de données (bleu et orange) : elles donnent presque la même chose.
+
 ![Sources PV](fig/e0_pv_sources.png)
+
+> 📊 **Comment lire :** Comparaison des deux sources de données solaires. À gauche, chaque point est un quart d'heure de 2025 : s'il est sur la diagonale, les deux sources sont d'accord, ce qui est presque toujours le cas. À droite, la puissance solaire installée en France chaque année selon chaque source : elles diffèrent d'environ 7 %.
+
 
 | Indicateur 2025 | Energy-Charts | RTE éCO2mix |
 |---|---|---|
@@ -106,13 +139,22 @@ UTC (minuit à Paris = 23 h UTC en novembre). Le cœur du simulateur ne verra ja
 
 ![Frigo](fig/e1_frigo.png)
 
+> 📊 **Comment lire :** Consommation simulée d'un réfrigérateur pendant 3 heures. En gris, son fonctionnement minute par minute (400 W pendant 7 min, 2 fois par heure) ; en bleu foncé, la moyenne par quart d'heure utilisée par le simulateur. La moyenne (93 W en continu) donne 2,24 kWh par jour, et non les 1 kWh annoncés dans le plan.
+
+
 **Interprétation – incohérence à trancher.** 400 W × (2 × 7 min) par heure × 24 h =
 0,4 × 14/60 × 24 = **2,24 kWh/jour**, pas 1. Soit la conso visée (≈ 1 kWh/jour, plus réaliste pour
 un frigo récent) est la bonne et il faut ~3 min de marche par cycle, ou 200 W ; soit les
 paramètres sont bons et la conso est de 2,24. **J'ai gardé les paramètres du plan** en attendant ta décision.
 
 ![Studio semaine](fig/e1_studio_semaine.png)
+
+> 📊 **Comment lire :** Consommation simulée d'un studio pendant une semaine, appareil par appareil (une couleur par appareil, empilées). À droite, la journée « moyenne » : la ligne est la moyenne, la bande grise contient 80 % des jours. Les pics du soir viennent du lave-vaisselle, ceux de la journée du lave-linge.
+
 ![Studio par appareil](fig/e1_studio_par_appareil.png)
+
+> 📊 **Comment lire :** Énergie consommée par jour par chaque appareil du studio. Le total, 10,34 kWh/jour, correspond aux ≈ 10 kWh attendus. Le lave-linge et le lave-vaisselle pèsent plus de la moitié, parce que j'ai supposé qu'ils tournent tous les jours.
+
 
 **Interprétation.** Le studio atteint 10,34 kWh/jour, mais c'est en partie **par construction** :
 j'ai supposé un lave-linge et un lave-vaisselle tous les jours (6 kWh à eux deux, soit 58 % du
@@ -121,6 +163,9 @@ La courbe est très « en marches d'escalier » : c'est la limite du bottom-up s
 sur les puissances, pas de foisonnement).
 
 ![PME semaine](fig/e1_pme_semaine.png)
+
+> 📊 **Comment lire :** Consommation simulée d'une PME de bureaux inventée pendant une semaine de juin (une couleur par usage). On voit le socle permanent (serveurs, froid), la journée de bureau en semaine, le pic de la cantine à midi et la recharge des véhicules. Le week-end, il ne reste que le socle.
+
 
 **Interprétation.** Pour tester batterie et PV sur un client où ils ont du sens, j'ai **inventé**
 une PME de bureaux : talon 15 kW (serveurs, froid), 45 kW de 8 h à 19 h en semaine, cantine 30 kW
@@ -141,12 +186,18 @@ une PME de bureaux : talon 15 kW (serveurs, froid), 45 kW de 8 h à 19 h en sema
 
 ![Exemple 270 €](fig/e2_exemple_270.png)
 
+> 📊 **Comment lire :** Exemple de la fiche « bloc + spot ». Le client achète d'avance 100 kW à prix fixe (pointillés). Quand il consomme plus (zone rouge), il achète le reste au prix du marché ; quand il consomme moins (zone verte), il revend l'excédent. La ligne violette est le prix du marché (axe de droite). À droite, le coût de la journée selon trois contrats : on retrouve les 270 € de la fiche.
+
+
 *(Ligne violette : prix spot, axe de droite.)*
 
 **Interprétation.** Le cas de référence de la fiche est retrouvé **exactement**, par les trois
 chemins (fonction, scénario, ligne de commande).
 
 ![PME offres](fig/e2_pme_offres.png)
+
+> 📊 **Comment lire :** À gauche, la facture d'énergie de la PME mois par mois selon trois contrats : prix du marché seul (violet), prix fixe à 80 €/MWh (gris), ou mélange des deux (bleu). À droite, le prix moyen du marché chaque mois, comparé au prix fixe de 80. En 2025, le marché a presque toujours été moins cher que le fixe.
+
 
 | PME, 2025 | Coût annuel de l'énergie |
 |---|---|
@@ -176,10 +227,25 @@ chemins (fonction, scénario, ligne de commande).
 | `test_surcout_sur_les_kwh_achetes` | surcoût appliqué aux seuls kWh achetés | ✅ |
 
 ![Conversion](fig/e3_conversion.png)
+
+> 📊 **Comment lire :** Vérification d'un calcul du plan : on convertit une quantité de soleil reçue en 4 heures (en J/cm²) en électricité produite par m² de panneau, avec un rendement de 20 %. Les deux barres doivent valoir 0,14 et 0,24 kW/m², ce qui est le cas.
+
 ![PV jour été semaine](fig/e3_pv_jour_ete_semaine.png)
+
+> 📊 **Comment lire :** Un mercredi de juin à la PME, avec 100 kWc de panneaux. La ligne foncée est la consommation ; en orange, l'électricité solaire consommée sur place ; en vert, le surplus revendu ; en pointillés bleus, ce qui est acheté au réseau (sous zéro = revendu). En semaine, presque tout le solaire est consommé sur place.
+
 ![PV jour été samedi](fig/e3_pv_jour_ete_samedi.png)
+
+> 📊 **Comment lire :** Même graphique pour un samedi de juin : les bureaux sont fermés, la consommation est faible et presque toute la production solaire part en vert, c'est-à-dire revendue au réseau, souvent à un prix très bas ce jour-là.
+
 ![PV jour hiver](fig/e3_pv_jour_hiver.png)
+
+> 📊 **Comment lire :** Même graphique pour un jour de janvier : la production solaire est faible et courte. Elle ne couvre qu'une petite partie de la consommation et il n'y a aucun surplus.
+
 ![PV mensuel](fig/e3_pv_mensuel.png)
+
+> 📊 **Comment lire :** Ce que deviennent, mois par mois, les kWh produits par les 100 kWc de la PME : consommés directement (orange), stockés en batterie (ici aucun, car il n'y a pas de batterie dans ce cas) ou revendus (vert). La production est 4 fois plus forte en été qu'en hiver.
+
 
 | PME + 100 kWc (2025) | Valeur |
 |---|---|
@@ -196,6 +262,9 @@ chemins (fonction, scénario, ligne de commande).
   que 14 €/MWh, car il tombe surtout les week-ends ensoleillés à prix négatif ou nul.
 
 ![Dimensionnement PV](fig/e3_dimensionnement_pv.png)
+
+> 📊 **Comment lire :** Que se passe-t-il si on pose plus ou moins de panneaux sur la PME ? À gauche : la part du solaire consommée sur place (orange) baisse quand on en pose beaucoup, tandis que la part de la consommation couverte par le solaire (vert) monte. À droite : l'économie annuelle. Si le surplus est revendu au prix du marché, elle croît en ligne droite ; s'il n'est pas payé (rouge), les grandes installations rapportent beaucoup moins.
+
 
 **Interprétation.** Au-delà de ~50 kWc, l'autoconsommation baisse : le PV dépasse la conso le midi.
 Si le surplus est revendu au spot, le gain est **strictement proportionnel** aux kWc, car un kWh
@@ -215,9 +284,21 @@ revente (et le TURPE évité) décide du bon dimensionnement.**
 | `check_balance` (appelé à chaque simulation) | bilan P_grid, SOC dans les bornes, énergie conservée | ✅ sur toutes les simulations annuelles |
 
 ![Batterie studio été](fig/e4_studio_batterie_semaine.png)
+
+> 📊 **Comment lire :** Une semaine de juin pour le studio équipé de 3 kWc de panneaux et d'une batterie de 5 kWh. En haut, le niveau de charge de la batterie (en %, de 10 à 90 %). En bas : barres jaunes = la batterie se charge avec le soleil, barres rouges = elle restitue l'énergie le soir ; la ligne violette est le prix du marché. Elle se remplit le jour et se vide le soir, presque chaque jour.
+
 ![Batterie studio hiver](fig/e4_studio_batterie_hiver.png)
+
+> 📊 **Comment lire :** Même graphique pour une semaine de janvier : le soleil suffit à peine pour la consommation de la journée, la batterie reste presque vide. En hiver, elle sert peu.
+
 ![SOC année](fig/e4_soc_annee.png)
+
+> 📊 **Comment lire :** Niveau de charge de la batterie du studio sur toute l'année. Il ne sort jamais des limites fixées (10 % et 90 %, pointillés rouges). C'est un test de bon fonctionnement du modèle de batterie. Elle est surtout utilisée d'avril à septembre.
+
 ![Bilan studio](fig/e4_studio_bilan.png)
+
+> 📊 **Comment lire :** Bilan d'une année pour le studio avec ses panneaux, sans batterie (rouge) puis avec batterie (bleu), en kWh. La batterie fait passer les achats au réseau d'environ 2 700 à 1 450 kWh et réduit fortement la revente du surplus. Elle perd environ 140 kWh par an (rendement de 90 %).
+
 
 | Studio, 3 kWc (2025) | Sans batterie | Avec 5 kWh |
 |---|---|---|
@@ -251,13 +332,22 @@ et on décharge sur les plus chers, en choisissant juste assez de quarts d'heure
 vider la batterie. On le fait seulement si le spread du jour couvre les pertes. Le surplus PV est toujours stocké.
 
 ![Semaine prix mars](fig/e5_semaine_prix.png)
+
+> 📊 **Comment lire :** Une semaine de mars à la PME (100 kWc + batterie 100 kWh) pilotée selon les prix. En haut, le niveau de charge de la batterie. En bas : barres bleues = charge depuis le réseau quand le prix (ligne violette) est bas ; barres rouges = décharge quand il est haut ; barres jaunes = charge avec le surplus solaire. La batterie fait environ un « plein puis vidange » par jour.
+
 ![Semaine prix juin](fig/e5_semaine_prix_ete.png)
+
+> 📊 **Comment lire :** Même graphique pour une semaine de juin : la batterie se charge en milieu de journée, quand le prix est au plus bas (souvent proche de zéro grâce au solaire), et se vide le matin et le soir, quand il remonte.
+
 
 **Interprétation.** La batterie fait environ un cycle par jour : elle se charge **la nuit** ou **au
 creux de midi** (prix bas ou négatifs) et se décharge **le matin et le soir**. En juin, la
 charge de midi coïncide avec le creux solaire : stocker l'énergie solaire, c'est aussi acheter le kWh le moins cher de la journée.
 
 ![Stratégies](fig/e5_strategies.png)
+
+> 📊 **Comment lire :** Économie annuelle de la PME selon l'équipement installé et la façon de piloter la batterie. Barre bleue = économie sur l'achat d'électricité ; barre verte = économie sur les pénalités payées quand on dépasse la puissance prévue au contrat (négative = on en paie plus). Le total est écrit à droite. Le pilotage selon les prix rapporte le plus sur l'énergie ; le pilotage « écrêter les pointes » (peak shaving) supprime toutes les pénalités.
+
 
 | PME, économie annuelle vs « rien » | Énergie | Pénalités | Total | Cycles/an |
 |---|---|---|---|---|
@@ -271,6 +361,9 @@ charge de midi coïncide avec le creux solaire : stocker l'énergie solaire, c'e
 | PV + batterie, peak shaving | 3 839 € | 2 640 € | 6 479 € | 1 |
 
 ![Gain vs spread](fig/e5_gain_vs_spread.png)
+
+> 📊 **Comment lire :** Chaque point est un jour de 2025, pour la PME avec une batterie seule pilotée selon les prix. En abscisse, l'écart entre le prix le plus haut et le plus bas du jour ; en ordonnée, ce que la batterie a fait gagner ce jour-là (couleur = mois). Plus l'écart est grand, plus le gain est élevé ; il dépasse rarement 15 € par jour. Les quelques points sous zéro sont des jours où la règle simple s'est trompée et a perdu un peu d'argent.
+
 
 **Interprétation.**
 - **Validation de l'étape :** sur les jours à fort spread (quart supérieur), la règle « prix »
@@ -297,8 +390,17 @@ charge de midi coïncide avec le creux solaire : stocker l'énergie solaire, c'e
 | `test_peak_shaving_ecrete_les_pointes` | pointe 30 → 20 kW ; recharge sous 18 kW ; pénalité 100 € → 0 € | ✅ |
 
 ![Monotone](fig/e6_monotone.png)
+
+> 📊 **Comment lire :** Les 8 760 heures de l'année, classées de la plus forte à la plus faible puissance achetée au réseau. Le pointillé est la puissance prévue au contrat (90 kW) ; tout ce qui dépasse est pénalisé. Rouge : sans équipement, la PME dépasse quelques centaines d'heures par an. Bleu : la batterie écrête exactement à 90 kW. Vert : une batterie chargée sans limite crée une pointe encore plus haute (136 kW).
+
 ![Jour de pointe](fig/e6_jour_pointe.png)
+
+> 📊 **Comment lire :** Les deux jours où la PME consomme le plus. Rouge : puissance achetée sans équipement ; bleu : avec une batterie qui écrête les pointes ; pointillés : puissance prévue au contrat (90 kW). La courbe bleue ne dépasse jamais le pointillé : la batterie fournit le complément pendant les pics de midi et se recharge ensuite, quand la consommation baisse.
+
 ![SOC peak shaving](fig/e6_soc_peak_shaving.png)
+
+> 📊 **Comment lire :** Même période, vue depuis la batterie : en haut son niveau de charge, en bas ses charges (bleu) et décharges (rouge). Elle ne se décharge que pendant les pics, puis se recharge doucement. Elle travaille peu, ce qui ménage son usure.
+
 
 **Interprétation.**
 - La pointe annuelle passe de **112 à 90 kW**, exactement la puissance souscrite, et la pénalité de
@@ -322,6 +424,9 @@ cycles, 15 ans), PV 25 ans, OPEX du PV 1,5 %/an, sans actualisation ni dégradat
 
 ![Temps de retour](fig/e7_temps_de_retour.png)
 
+> 📊 **Comment lire :** Nombre d'années nécessaires pour que les économies remboursent l'achat de l'équipement, selon que l'équipement est payé au prix bas (vert), moyen (jaune) ou haut (rouge) des fourchettes du devis. Le trait noir est la durée de vie de l'équipement : si la barre le dépasse, l'équipement meurt avant d'être remboursé. La plupart des barres le dépassent.
+
+
 | Cas (2025, énergie au spot) | Retour prix bas / médian / haut | Durée de vie | Rentable ? |
 |---|---|---|---|
 | PME : PV 100 kWc | 12 / 28 / 54 ans | 25 ans | **seulement au prix bas** |
@@ -332,7 +437,13 @@ cycles, 15 ans), PV 25 ans, OPEX du PV 1,5 %/an, sans actualisation ni dégradat
 | Studio : batterie 5 kWh ajoutée | 36 / 58 / 79 ans | 14,8 ans | non (au spot) |
 
 ![Taille batterie](fig/e7_taille_batterie.png)
+
+> 📊 **Comment lire :** Pour la PME, batterie seule pilotée selon les prix, de 25 à 400 kWh. Ligne bleue : ce qu'elle fait gagner par an. Zone rouge : ce qu'elle coûte par an (prix d'achat réparti sur sa durée de vie, du moins cher au plus cher). La ligne bleue reste toujours sous la zone rouge : quelle que soit la taille, la batterie coûte plus qu'elle ne rapporte.
+
 ![Usure vs spread](fig/e7_usure_vs_spread.png)
+
+> 📊 **Comment lire :** Chaque fois qu'une batterie se charge puis se vide, elle s'use : cela « coûte » environ 75 à 140 € par MWh restitué (traits verticaux, selon son prix d'achat). L'histogramme montre, pour chaque jour de 2025, ce que rapporte un cycle « acheter au plus bas, revendre au plus haut » (pertes comprises). Seuls les jours à droite des traits sont rentables, soit environ un quart des jours.
+
 
 **Interprétation.**
 - **Arbitrage seul : non rentable en 2025.** Le coût d'usure d'un kWh déchargé (CAPEX ÷ kWh
@@ -345,6 +456,9 @@ cycles, 15 ans), PV 25 ans, OPEX du PV 1,5 %/an, sans actualisation ni dégradat
   gain par kWh, mais elles reposent ici sur une hypothèse inventée.
 
 ![Sensibilité surcoût](fig/e7_sensibilite_surcout.png)
+
+> 📊 **Comment lire :** Sur une vraie facture, chaque kWh acheté coûte aussi des frais de réseau et des taxes, ignorés par défaut dans ce rapport. En abscisse, le montant de ces frais par MWh. À gauche, le gain annuel ; à droite, le nombre d'années pour rembourser (sous les traits noirs = rentable). Plus ces frais sont élevés, plus les panneaux deviennent rentables. Seule la batterie qui spécule sur les prix (vert) y perd, car elle achète plus de kWh qu'elle n'en rend.
+
 
 **Interprétation de la sensibilité** (surcoût ajouté à chaque kWh acheté : acheminement + taxes) :
 - **PV de la PME :** dès 50 €/MWh de surcoût évité, le retour tombe à 18 ans ; à 100 €/MWh, à **10,5 ans**. Le PV
@@ -362,15 +476,54 @@ cycles, 15 ans), PV 25 ans, OPEX du PV 1,5 %/an, sans actualisation ni dégradat
 Générés automatiquement pour la PME (PV 100 kWc + batterie 100 kWh, règle prix) ; même jeu pour le
 studio dans [fig/e8_studio](fig/e8_studio). Export CSV de tous les pas : `results/pme/resultats.csv`.
 
-| # | Graphique | PME |
-|---|---|---|
-| 1 | Utilisation du solaire | ![](fig/e8_pme/1_utilisation_solaire.png) |
-| 2 | Utilisation de la batterie | ![](fig/e8_pme/2_utilisation_batterie.png) |
-| 3 | Courbe de charge brute | ![](fig/e8_pme/3_courbe_de_charge_brute.png) |
-| 4 | Ce qu'on achète au réseau | ![](fig/e8_pme/4_courbe_achetee.png) |
-| 5 | Coût de l'énergie | ![](fig/e8_pme/5_cout_energie.png) |
-| 6 | Coût de la batterie | ![](fig/e8_pme/6_cout_batterie.png) |
-| 7 | Coût des panneaux | ![](fig/e8_pme/7_cout_panneaux.png) |
+### 1. Utilisation du solaire
+
+![Utilisation du solaire](fig/e8_pme/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 100 kWc de la PME, maintenant avec batterie : consommés directement (orange), stockés dans la batterie (vert foncé) ou revendus (vert clair). Le titre donne la production totale et la part utilisée sur place.
+
+
+### 2. Utilisation de la batterie
+
+![Utilisation de la batterie](fig/e8_pme/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin de la batterie de la PME. En haut, son niveau de charge ; en bas, ses charges depuis le soleil (jaune) ou le réseau (bleu) et ses décharges (rouge), avec le prix du marché (ligne violette, axe de droite).
+
+
+### 3. Courbe de charge brute
+
+![Courbe de charge brute](fig/e8_pme/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** Consommation de la PME, avant tout équipement. À gauche, une semaine de juin ; à droite, la journée moyenne de l'année (ligne) et la plage dans laquelle se trouvent 80 % des jours (bande grise).
+
+
+### 4. Ce qu'on achète au réseau
+
+![Ce qu'on achète au réseau](fig/e8_pme/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** Ce que la PME achète au réseau pendant une semaine de juin, sans équipement (rouge) et avec panneaux et batterie (bleu). Sous zéro (zone verte), elle revend. Le pointillé est la puissance prévue au contrat. Avec l'équipement, les achats de la journée sont fortement réduits et ne dépassent plus le pointillé, et le week-end la PME revend.
+
+
+### 5. Coût de l'énergie
+
+![Coût de l'énergie](fig/e8_pme/5_cout_energie.png)
+
+> 📊 **Comment lire :** Facture d'électricité de la PME, mois par mois, sans équipement (rouge) et avec panneaux et batterie (bleu). Le titre donne l'économie sur l'année et la légende les totaux annuels. Seul le prix de l'énergie est compté, sans frais de réseau ni taxes.
+
+
+### 6. Coût de la batterie
+
+![Coût de la batterie](fig/e8_pme/6_cout_batterie.png)
+
+> 📊 **Comment lire :** La batterie de 100 kWh seule. À gauche, son prix d'achat selon trois devis (bas, moyen, haut). À droite, l'argent cumulé au fil des années : on part du prix d'achat (négatif) et on ajoute chaque année ce qu'elle fait gagner en plus des panneaux. Si la ligne croise zéro avant la fin (15 ans), la batterie est remboursée ; ici, jamais.
+
+
+### 7. Coût des panneaux
+
+![Coût des panneaux](fig/e8_pme/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 100 kWc de panneaux, sur 25 ans. La ligne verte (prix d'achat bas) croise zéro au bout d'environ 12 ans : remboursé, puis bénéficiaire. Au prix moyen et au prix haut, les panneaux ne sont pas remboursés en 25 ans, si l'on ne compte que le prix de l'énergie.
+
 
 **Interprétation.** L'économie mensuelle est assez régulière en euros (≈ 300 à 700 €/mois). L'hiver,
 c'est surtout la batterie qui arbitre des prix élevés ; l'été, c'est le PV. En proportion, elle est
