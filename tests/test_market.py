@@ -55,20 +55,20 @@ def test_prix_manquant_refuse():
 
 def test_scenario_exemple_bloc_spot_via_csv():
     config = scenario.read(ROOT / "scenarios" / "exemple_bloc_spot.yaml")
-    inputs, costs = scenario.run(config)
-    assert len(inputs) == 96
-    totals = {c.offer: c.total_eur for c in costs}
+    res = scenario.run(config)
+    assert len(res.inputs) == 96
+    totals = {c.offer: c.total_eur for c in res.costs_before}
     assert totals == pytest.approx({"spot": 276, "fixed": 240, "bloc_spot": 270})
 
 
 @pytest.mark.network
 def test_reseau_scenario_studio_prix_reels():
     config = scenario.read(ROOT / "scenarios" / "studio.yaml")
-    inputs, costs = scenario.run(config)
-    assert len(inputs) == 7 * 96
-    assert inputs["spot_eur_mwh"].notna().all()
-    assert inputs["load_kw"].sum() * 0.25 == pytest.approx(7 * 10.34)
-    assert {c.offer for c in costs} == {"spot", "fixed", "bloc_spot"}
+    res = scenario.run(config)
+    assert len(res.inputs) == 7 * 96
+    assert res.inputs["spot_eur_mwh"].notna().all()
+    assert res.inputs["load_kw"].sum() * 0.25 == pytest.approx(7 * 10.34)
+    assert {c.offer for c in res.costs_before} == {"spot", "fixed", "bloc_spot"}
 
 
 def test_cli(capsys):

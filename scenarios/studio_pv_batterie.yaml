@@ -1,0 +1,22 @@
+# Studio fictif (scenarios/studio.yaml) sur l'année 2025, avec 3 kWc de PV et 5 kWh de batterie.
+period: {start: 2025-01-01, end: 2025-12-31, timezone: Europe/Paris}
+
+site:
+  adapter: bottom_up
+  seed: 42
+  appliances:
+    - {type: cyclic,    name: refrigerateur,  power_w: 400,  on_minutes: 7, cycles_per_hour: 2}
+    - {type: schedule,  name: tv,             power_w: 100,  windows: [[18, 23]]}
+    - {type: schedule,  name: eclairage,      power_w: 200,  windows: [[7, 9], [17, 23]]}
+    - {type: daily_run, name: lave_vaisselle, power_w: 1000, duration_h: 2, earliest_h: 19, latest_end_h: 24}
+    - {type: daily_run, name: lave_linge,     power_w: 2000, duration_h: 2, earliest_h: 8,  latest_end_h: 22}
+
+market:
+  prices: {adapter: energy_charts, bzn: FR}
+  offers:
+    - {type: spot, export_price_eur_mwh: 11}   # surplus racheté 1,1 c€/kWh (fiche prix)
+    - {type: fixed, price_eur_mwh: 80}
+
+pv: {peak_kw: 3, source: energy_charts, max_gap_hours: 4}   # trou Energy-Charts de 4 h le 10/12/2025 (16 h–20 h) interpolé
+battery: {capacity_kwh: 5, c_rate: 0.5, cycle_life: 5000}
+strategy: {type: surplus_pv}

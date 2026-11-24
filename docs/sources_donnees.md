@@ -25,6 +25,13 @@
 - **Aucune valeur 2026** publiée : pour 2026, la valeur 2025 est utilisée avec un avertissement → facteur de charge **surestimé** (le parc croît d'environ 5 GW/an, soit ~+20 %).
 - La date de référence de la valeur annuelle (fin d'année ? moyenne ?) n'est pas documentée par l'API Energy-Charts ; pour RTE, il s'agit en principe du parc au 31/12. Une puissance peut être imposée (`installed_mw=...`).
 
+## Année 2025 complète (téléchargée le 24/11/2026)
+- Productible PV 2025 : **1 069 kWh/kWc** (Energy-Charts) et **1 068 kWh/kWc** (RTE) ; corrélation 0,99 au quart d'heure.
+- Trous : Energy-Charts 20 quarts d'heure (25/10 14 h–15 h ; 10/12 16 h–20 h), RTE 2 (nuit du changement d'heure, dernier pas de l'année).
+- Spot 2025 : moyenne 61 €/MWh, 509 h à prix négatif, spread journalier médian 92 €/MWh.
+
 ## Réseau
+- Energy-Charts applique une **limite de débit** (HTTP 429) quand on enchaîne les requêtes : le client
+  respecte `Retry-After`, espace les appels d'1 s et reprend grâce au cache.
 - Derrière le proxy de l'entreprise, la vérification TLS échoue avec les certificats de Python : le paquet `truststore` (certificats Windows) est utilisé ; la vérification n'est pas désactivée.
 - Cache local : `data/cache/` (non versionné). Une période en cours (jour non terminé) reste en cache telle qu'elle a été lue : supprimer le fichier pour la relire.
