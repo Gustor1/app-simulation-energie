@@ -25,7 +25,8 @@ DataFrame pandas, index UTC au pas de 15 min, colonnes `load_kw` (kW), `pv_cf` (
 |---|---|---|
 | `csv_generic` | n'importe quel CSV + mapping YAML | `load(path, mapping)` |
 | `energy_charts` | prix spot, facteur de charge PV France | `load_spot`, `load_pv_cf`, `load` |
-| `rte_eco2mix` | facteur de charge PV France (ODRÉ) | `load_pv_cf` |
+| `rte_eco2mix` | facteur de charge PV France ou d'une région (ODRÉ) | `load_pv_cf(region=44)` |
+| `odre_meteo` | rayonnement solaire et température d'une région (RTE / ODRÉ) | `load_irradiance`, `load_temperature` |
 
 ## Modules
 
@@ -52,6 +53,7 @@ python -m simu run scenarios/studio.yaml              # studio bottom-up + prix 
 
 ```bash
 python -m simu run scenarios/pme_bureaux.yaml --out results/pme --week 2025-06-16
+python -m simu run scenarios/studio_strasbourg.yaml --out results/studio_strasbourg   # météo réelle Grand Est
 # -> bilan, coûts, pénalités, rentabilité + results/pme/resultats.csv + 7 graphiques PNG
 ```
 

@@ -678,5 +678,124 @@ res_st = scenario.run(studio_cfg)
 for p in scenario.make_plots(res_st, FIG / "e8_studio", "2025-06-02"):
     print("  ", p.name)
 
+# =====================================================================================
+# Simulation Strasbourg (Grand Est) : PV d'après le rayonnement réel, chauffage d'après la température réelle
+# =====================================================================================
+print("Strasbourg")
+from simu.adapters import odre_meteo  # noqa: E402
+
+irr = odre_meteo.load_irradiance("2025-01-01", "2025-12-31")["irradiance_wm2"]
+from simu.adapters._http import get_json  # noqa: E402
+
+blocks = odre_meteo.parse_irradiance(get_json(
+    f"{odre_meteo.BASE_URL}/{odre_meteo.IRRADIANCE_DATASET}/exports/json",
+    {"where": "code_insee_region='44' AND date > '2024-12-31T00:00:00+00:00' AND date <= '2026-01-01T03:00:00+00:00'",
+     "select": "date,ssrd03h", "order_by": "date"}, timeout=120))
+f, axes = plt.subplots(1, 2, figsize=(13, 3.8), sharey=True)
+for ax_, day, label in [(axes[0], "2025-06-21", "21/06/2025 (ensoleillé)"), (axes[1], "2025-01-15", "15/01/2025 (hiver)")]:
+    t0 = pd.Timestamp(day, tz=TZ)
+    t1 = t0 + pd.Timedelta(days=1)
+    b = blocks[(blocks.index > t0) & (blocks.index <= t1 + pd.Timedelta("3h"))]
+    for end, v in b.items():
+        ax_.fill_between([end - pd.Timedelta("3h"), end], [v, v], color=C["pv"], alpha=0.3, step="post",
+                         label="donnée RTE/ODRÉ : moyenne sur 3 h" if end == b.index[0] else None)
+    w = irr[(irr.index >= t0) & (irr.index < t1)]
+    ax_.plot(w.index, w, drawstyle="steps-post", color=C["pv_self"], lw=1.6, label="réparti au 1/4 h selon la hauteur du soleil")
+    ax_.set_title(label)
+    ax_.set_xlim(t0, t1)
+    plots._time_axis(ax_, 1)
+axes[0].set_ylabel("rayonnement global horizontal (W/m²)")
+axes[0].legend(loc="upper left", fontsize=8)
+f.suptitle("Rayonnement solaire réel, Grand Est (RTE / ODRÉ)", fontweight="bold")
+f.tight_layout()
+fig("st_rayonnement_jour", f)
+
+model_cf = pv.power_from_irradiance_kwc(irr, 1.0)
+real_ge = rte_eco2mix.load_pv_cf("2025-01-01", "2025-12-31", region=44)["pv_cf"]
+anomaly_day = real_ge.tz_convert(TZ).idxmax().strftime("%Y-%m-%d")
+cmp_ = pd.DataFrame({"modèle (rayonnement Grand Est)": model_cf, "réel Grand Est (RTE)": real_ge, "réel France (Energy-Charts)": cf_ec})
+monthly_y = (cmp_.tz_convert(TZ).resample("MS").sum() * standard.DT_H)
+f, (a1, a2) = plt.subplots(1, 2, figsize=(14, 4), gridspec_kw={"width_ratios": [1, 1.4]})
+xm = np.arange(12)
+for i_, (col, color) in enumerate(zip(monthly_y.columns, [C["pv_self"], C["bat"], C["neutral"]])):
+    a1.bar(xm + (i_ - 1) * 0.27, monthly_y[col], 0.27, color=color, label=f"{col} : {monthly_y[col].sum():.0f} kWh/kWc/an")
+a1.set_xticks(xm)
+a1.set_xticklabels(monthly_y.index.strftime("%b"))
+a1.set_ylabel("kWh produits par kWc")
+a1.set_title("Production mensuelle par kWc installé (2025)")
+a1.legend(fontsize=8)
+wk = cmp_[(cmp_.index.tz_convert(TZ) >= pd.Timestamp("2025-06-09", tz=TZ)) & (cmp_.index.tz_convert(TZ) < pd.Timestamp("2025-06-16", tz=TZ))]
+a2.plot(wk.index, wk.iloc[:, 0], color=C["pv_self"], lw=1.5, label=wk.columns[0])
+a2.plot(wk.index, wk.iloc[:, 1], color=C["bat"], lw=1.2, label=wk.columns[1])
+a2.set_ylabel("kW produits par kWc")
+a2.set_title("Une semaine de juin : modèle et production réelle du Grand Est")
+a2.legend(fontsize=8, loc="upper left")
+plots._time_axis(a2, 7)
+fig("st_validation_pv", f)
+
+ok_ = cmp_.drop(index=cmp_.index[cmp_.index.tz_convert(TZ).strftime("%Y-%m-%d") == anomaly_day]).dropna()
+temps = odre_meteo.load_temperature("2025-01-01", "2025-12-31")
+k_heat = 0.5
+heat = pd.Series([lb.Heating("c", k_heat).daily_kwh(t) for t in temps.values], index=pd.to_datetime(temps.index))
+f, ax = plt.subplots(figsize=(12, 3.8))
+ax.bar(heat.index, heat, width=1, color=C["grid"], alpha=0.6, label=f"chauffage du studio (kWh/jour, k = {k_heat})")
+ax.set_ylabel("kWh / jour")
+ax2 = ax.twinx()
+ax2.plot(heat.index, temps.values, color=C["grid_after"], lw=1, label="température moyenne du jour (°C)")
+ax2.axhline(15, color=C["grid_after"], ls="--", lw=0.8)
+ax2.set_ylabel("°C", color=C["grid_after"])
+ax2.grid(False)
+ax.set_title(f"Grand Est 2025 : température réelle et chauffage simulé ({heat.sum():.0f} kWh/an)")
+ax.legend(loc="upper left", fontsize=8)
+ax2.legend(loc="upper right", fontsize=8)
+ax.xaxis.set_major_formatter(plots.mdates.DateFormatter("%b"))
+fig("st_temperature_chauffage", f)
+
+st_studio = scenario.run(scenario.read(ROOT / "scenarios" / "studio_strasbourg.yaml"))
+st_pme = scenario.run(scenario.read(ROOT / "scenarios" / "pme_strasbourg.yaml"))
+for name, r_, week in [("st_studio", st_studio, "2025-06-02"), ("st_pme", st_pme, "2025-06-16")]:
+    for p in scenario.make_plots(r_, FIG / name, week):
+        print("  ", name, p.name)
+fig("st_studio_hiver_batterie", plots.battery_use(st_studio.after, "2025-01-13", 7, "Studio Strasbourg, janvier : chauffage, PV et batterie"))
+studio_appliances = scenario.read(ROOT / "scenarios" / "studio_strasbourg.yaml")["site"]["appliances"]
+winter_appliances = [scenario._resolve_temperatures(a, "2025-01-13", "2025-01-19") for a in studio_appliances]
+by_st = lb.simulate_appliances(winter_appliances, "2025-01-13", "2025-01-19", seed=42)
+fig("st_studio_conso_hiver", plots.load_curve(simulate.run(by_st.sum(axis=1).rename("load_kw")), "2025-01-13", 7,
+                                               "Studio Strasbourg, janvier (bottom-up + chauffage)", by=by_st))
+
+
+def summarize(r_):
+    s_ = r_.summary_after
+    g_ = scenario.component_gains(r_)
+    return {
+        "conso_kwh": eur(s_["conso_kwh"]), "pv_kwh": eur(s_["pv_kwh"]), "autoconso": eur(s_["taux_autoconso"]),
+        "autoproduction": eur(s_["taux_autoproduction"]), "cycles": eur(s_.get("cycles_equivalents", 0)),
+        "cout_avant": eur(r_.costs_before[0].total_eur), "cout_apres": eur(r_.costs_after[0].total_eur),
+        "gain_pv": eur(g_.get("pv", {}).get("gain_eur", 0)), "gain_batterie": eur(g_.get("batterie", {}).get("gain_eur", 0)),
+        "penalite_avant": eur(r_.penalty_before["penalite_eur"]) if r_.penalty_before else None,
+        "penalite_apres": eur(r_.penalty_after["penalite_eur"]) if r_.penalty_after else None,
+        "rentabilite": {p.level: {"capex": eur(p.capex_eur), "gain_net": eur(p.net_annual_eur),
+                                  "retour": None if p.payback_years == math.inf else eur(p.payback_years)} for p in r_.profitability},
+        "pv_retour": {lvl: (lambda c: None if g_["pv"]["gain_eur"] - c * economics.PV_OPEX_RATE <= 0 else eur(c / (g_["pv"]["gain_eur"] - c * economics.PV_OPEX_RATE)))(
+            economics.capex(pv_kwc=r_.config["pv"]["peak_kw"], level=lvl)["pv_eur"]) for lvl in ("bas", "median", "haut")},
+        "bat_retour": {lvl: (lambda c: None if g_["batterie"]["gain_eur"] <= 0 else eur(c / g_["batterie"]["gain_eur"]))(
+            economics.capex(battery_kwh=r_.battery.capacity_kwh, level=lvl)["batterie_eur"]) for lvl in ("bas", "median", "haut")},
+        "bat_vie": eur(g_["batterie"]["vie_ans"]),
+    }
+
+
+N["strasbourg"] = {
+    "ghi_kwh_m2": eur(irr.sum() * standard.DT_H / 1000),
+    "productible_modele": eur(model_cf.sum() * standard.DT_H),
+    "productible_reel_ge": eur(real_ge.sum() * standard.DT_H),
+    "productible_national": eur(cf_ec.sum() * standard.DT_H),
+    "corr_modele_reel_ge": eur(ok_.corr().iloc[0, 1]), "corr_national_reel_ge": eur(ok_.corr().iloc[2, 1]),
+    "jour_anomalie_rte": anomaly_day, "cf_max_reel_ge": eur(real_ge.max()),
+    "parc_ge_2025_mw": rte_eco2mix.installed_solar_mw(region=44).get(2025),
+    "temperature_min": eur(temps.min()), "temperature_max": eur(temps.max()), "jours_sous_15": int((temps < 15).sum()),
+    "degres_jours": eur((20 - temps[temps < 15]).sum()), "chauffage_kwh": eur(heat.sum()),
+    "studio": summarize(st_studio), "pme": summarize(st_pme),
+}
+
 (OUT / "chiffres.json").write_text(json.dumps(N, indent=1, ensure_ascii=False, default=float), encoding="utf-8")
 print("OK ->", OUT)

@@ -165,6 +165,21 @@ def test_strategie_prix_vide_la_batterie_meme_si_la_conso_est_faible():
     assert s["charge_depuis_reseau_kwh"] == pytest.approx(8 / ETA, rel=1e-6)
 
 
+def test_strategie_prix_anticipe_le_surplus_solaire():
+    # nuit pas chère (20 €/MWh), soir cher (200) ; 4 kW de surplus PV de 10 h à 13 h = 12 kWh,
+    # de quoi remplir les 8 kWh utiles : la règle ne doit RIEN acheter au réseau pour la batterie.
+    load = by_hour({}, default=1.0)
+    prod = by_hour({(10, 13): 5.0})
+    spot = by_hour({(0, 6): 20.0, (18, 22): 200.0}, default=80.0)
+    r = simulate.run(load, prod, Battery(10), PriceThreshold(), spot)
+    assert r["grid_to_battery_kw"].sum() == 0
+    assert r["energy_kwh"].max() == pytest.approx(9)  # remplie par le soleil (SOC 90 %)
+    # sans anticipation, elle achète la nuit puis revend une partie du surplus solaire
+    naive = simulate.run(load, prod, Battery(10), PriceThreshold(anticipate_pv=False), spot)
+    assert naive["grid_to_battery_kw"].sum() > 0
+    assert naive["pv_export_kw"].sum() > r["pv_export_kw"].sum()
+
+
 def test_strategie_prix_respecte_la_limite_reseau():
     load = by_hour({}, default=2.0)
     spot = by_hour({(0, 6): 20.0, (18, 22): 200.0}, default=80.0)

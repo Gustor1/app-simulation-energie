@@ -44,13 +44,16 @@ class PriceThreshold:
     haut × η_aller-retour − bas > ``min_margin_eur_mwh``.
     ``grid_limit_kw`` : la charge depuis le réseau ne fait jamais dépasser cette puissance
     soutirée (ex. la puissance souscrite).
+    ``anticipate_pv`` (défaut : oui) : la météo du lendemain étant connue, la quantité achetée au
+    réseau pour remplir la batterie est diminuée du surplus solaire attendu dans la journée.
     """
 
     name = "price_threshold"
 
     def __init__(self, allow_export: bool = False, min_margin_eur_mwh: float = 0.0, tz: str = "Europe/Paris",
-                 grid_limit_kw: float | None = None):
+                 grid_limit_kw: float | None = None, anticipate_pv: bool = True):
         self.grid_limit_kw = grid_limit_kw
+        self.anticipate_pv = anticipate_pv
         self.allow_export = allow_export
         self.min_margin_eur_mwh = min_margin_eur_mwh
         self.tz = tz
@@ -78,13 +81,18 @@ class PriceThreshold:
         else:
             ch_cap = np.full(len(net), p_max)
         ch_cap[net < 0] = 0  # les heures de surplus PV ne servent pas à charger depuis le réseau
+        surplus = np.clip(-net, 0, p_max)  # surplus PV stockable à chaque pas (kW)
         day = spot.index.tz_convert(self.tz).normalize()
         low = np.full(len(net), -np.inf)
         high = np.full(len(net), np.inf)
         price = spot.to_numpy()
         for d in day.unique():
             m = np.asarray(day == d)
-            low[m] = self._threshold(price[m], ch_cap[m], battery.usable_kwh / battery.eta, cheapest=True)
+            # météo du lendemain connue : on n'achète au réseau que ce que le surplus solaire du jour ne remplira pas
+            pv_fill_kwh = float(surplus[m].sum() * DT_H * battery.eta) if self.anticipate_pv else 0.0
+            grid_kwh = max(0.0, battery.usable_kwh - pv_fill_kwh) / battery.eta
+            if grid_kwh > 1e-6:
+                low[m] = self._threshold(price[m], ch_cap[m], grid_kwh, cheapest=True)
             high[m] = self._threshold(price[m], dis_cap[m], battery.usable_kwh * battery.eta, cheapest=False)
         worth = high * battery.round_trip_efficiency - low > self.min_margin_eur_mwh
         self.low, self.high, self.worth = low, high, worth

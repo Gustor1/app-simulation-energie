@@ -335,24 +335,24 @@
    "decharge_kwh": 6342.22
   },
   "PV + batterie, prix": {
-   "gain_energie": 5478.92,
+   "gain_energie": 5593.47,
    "gain_penalites": 2179.12,
    "pointe_kw": 100.19,
    "penalite": 460.88,
-   "cycles": 339.12,
-   "pertes_kwh": 2861.0,
-   "charge_reseau_kwh": 27482.08,
-   "decharge_kwh": 25737.49
+   "cycles": 337.21,
+   "pertes_kwh": 2844.88,
+   "charge_reseau_kwh": 22696.23,
+   "decharge_kwh": 25592.4
   },
   "PV + batterie, prix sans limite": {
-   "gain_energie": 5473.44,
+   "gain_energie": 5588.37,
    "gain_penalites": -1308.02,
    "pointe_kw": 135.8,
    "penalite": 3948.02,
-   "cycles": 338.31,
-   "pertes_kwh": 2854.12,
-   "charge_reseau_kwh": 27429.69,
-   "decharge_kwh": 25675.56
+   "cycles": 336.51,
+   "pertes_kwh": 2838.95,
+   "charge_reseau_kwh": 22646.19,
+   "decharge_kwh": 25539.0
   },
   "batterie seule, prix": {
    "gain_energie": 1827.86,
@@ -658,24 +658,24 @@
   "Batterie ajoutée au PV (prix, gain marginal)": {
    "bas": {
     "capex": 30000.0,
-    "gain_net": 1638.01,
-    "retour": 18.31,
-    "vie": 14.74,
-    "bilan": -5849.24
+    "gain_net": 1752.56,
+    "retour": 17.12,
+    "vie": 14.83,
+    "bilan": -4013.84
    },
    "median": {
     "capex": 42500.0,
-    "gain_net": 1638.01,
-    "retour": 25.95,
-    "vie": 14.74,
-    "bilan": -18349.24
+    "gain_net": 1752.56,
+    "retour": 24.25,
+    "vie": 14.83,
+    "bilan": -16513.84
    },
    "haut": {
     "capex": 55000.0,
-    "gain_net": 1638.01,
-    "retour": 33.58,
-    "vie": 14.74,
-    "bilan": -30849.24
+    "gain_net": 1752.56,
+    "retour": 31.38,
+    "vie": 14.83,
+    "bilan": -29013.84
    }
   },
   "Studio : PV 3 kWc": {
@@ -772,5 +772,103 @@
    "haut": 137.5
   },
   "jours_spread_x09_sup_usure_median": 0.24
+ },
+ "strasbourg": {
+  "ghi_kwh_m2": 1345.27,
+  "productible_modele": 1076.21,
+  "productible_reel_ge": 1068.34,
+  "productible_national": 1069.06,
+  "corr_modele_reel_ge": 0.93,
+  "corr_national_reel_ge": 0.94,
+  "jour_anomalie_rte": "2025-06-30",
+  "cf_max_reel_ge": 1.47,
+  "parc_ge_2025_mw": 2602.0,
+  "temperature_min": -2.81,
+  "temperature_max": 28.61,
+  "jours_sous_15": 237,
+  "degres_jours": 2900.44,
+  "chauffage_kwh": 1450.22,
+  "studio": {
+   "conso_kwh": 5224.32,
+   "pv_kwh": 3228.64,
+   "autoconso": 0.72,
+   "autoproduction": 0.42,
+   "cycles": 360.46,
+   "cout_avant": 378.63,
+   "cout_apres": 200.44,
+   "gain_pv": 86.53,
+   "gain_batterie": 91.67,
+   "penalite_avant": null,
+   "penalite_apres": null,
+   "rentabilite": {
+    "bas": {
+     "capex": 6900.0,
+     "gain_net": 119.69,
+     "retour": 57.65
+    },
+    "median": {
+     "capex": 9850.0,
+     "gain_net": 101.69,
+     "retour": 96.86
+    },
+    "haut": {
+     "capex": 12800.0,
+     "gain_net": 83.69,
+     "retour": 152.94
+    }
+   },
+   "pv_retour": {
+    "bas": 139.16,
+    "median": 508.69,
+    "haut": null
+   },
+   "bat_retour": {
+    "bas": 32.73,
+    "median": 51.82,
+    "haut": 70.91
+   },
+   "bat_vie": 13.87
+  },
+  "pme": {
+   "conso_kwh": 287739.0,
+   "pv_kwh": 107621.38,
+   "autoconso": 0.9,
+   "autoproduction": 0.33,
+   "cycles": 340.0,
+   "cout_avant": 16860.35,
+   "cout_apres": 11578.49,
+   "gain_pv": 5503.46,
+   "gain_batterie": 1744.32,
+   "penalite_avant": 2640.0,
+   "penalite_apres": 674.08,
+   "rentabilite": {
+    "bas": {
+     "capex": 90000.0,
+     "gain_net": 6347.78,
+     "retour": 14.18
+    },
+    "median": {
+     "capex": 162500.0,
+     "gain_net": 5447.78,
+     "retour": 29.83
+    },
+    "haut": {
+     "capex": 235000.0,
+     "gain_net": 4547.78,
+     "retour": 51.67
+    }
+   },
+   "pv_retour": {
+    "bas": 13.03,
+    "median": 32.4,
+    "haut": 64.21
+   },
+   "bat_retour": {
+    "bas": 17.2,
+    "median": 24.36,
+    "haut": 31.53
+   },
+   "bat_vie": 14.71
+  }
  }
 }

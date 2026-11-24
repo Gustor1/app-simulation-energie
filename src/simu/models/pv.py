@@ -39,3 +39,21 @@ def power_from_irradiance(
     if pmax_w_m2 is not None:
         w_m2 = w_m2.clip(upper=pmax_w_m2)
     return (w_m2 * area_m2 / 1000).rename("pv_kw")
+
+
+def area_for_peak(peak_kw: float, pmax_w_m2: float = 250.0) -> float:
+    """Surface de panneaux (m²) pour une puissance crête donnée : kWc ÷ Pmax (250 W/m² d'après le plan)."""
+    return peak_kw / (pmax_w_m2 / 1000)
+
+
+def power_from_irradiance_kwc(
+    irradiance_wm2: pd.Series, peak_kw: float, efficiency: float = 0.20, pmax_w_m2: float = 250.0
+) -> pd.Series:
+    """Production (kW) d'une installation de ``peak_kw`` kWc d'après le rayonnement (chaîne du plan §4.3).
+
+    Surface = kWc ÷ Pmax ; P = rayonnement × rendement × surface, plafonnée à Pmax par m².
+    Rayonnement HORIZONTAL (pas d'inclinaison ni d'orientation des panneaux, pas de pertes de
+    température ou d'onduleur) : hypothèse simple. Validée sur le Grand Est 2025 : 1 076 kWh/kWc
+    modélisés contre ≈ 1 068 kWh/kWc mesurés par RTE (voir docs/rapport).
+    """
+    return power_from_irradiance(irradiance_wm2, area_for_peak(peak_kw, pmax_w_m2), efficiency, pmax_w_m2)

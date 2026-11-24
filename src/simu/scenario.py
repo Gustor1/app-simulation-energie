@@ -34,7 +34,7 @@ import pandas as pd
 import yaml
 
 from simu import economics, simulate, standard
-from simu.adapters import csv_generic, energy_charts, rte_eco2mix
+from simu.adapters import csv_generic, energy_charts, odre_meteo, rte_eco2mix
 from simu.models import load_bottom_up, market, pv
 from simu.models.battery import Battery
 from simu.strategies import rules
@@ -71,11 +71,20 @@ def load_site(config: dict) -> pd.DataFrame:
     start, end, tz = _period(config)
     adapter = site.get("adapter", "bottom_up")
     if adapter == "bottom_up":
-        return load_bottom_up.simulate(site["appliances"], start, end, tz=tz, seed=site.get("seed", 0))
+        appliances = [_resolve_temperatures(a, start, end) for a in site["appliances"]]
+        return load_bottom_up.simulate(appliances, start, end, tz=tz, seed=site.get("seed", 0))
     if adapter == "csv_generic":
         df = csv_generic.load(_path(config, site["load"]), _path(config, site["mapping"]))
         return df[["load_kw"]]
     raise ValueError(f"adaptateur de site inconnu : {adapter!r} (disponibles : bottom_up, csv_generic)")
+
+
+def _resolve_temperatures(appliance, start, end):
+    """Chauffage : ``temperatures: {source: odre, region: 44}`` -> températures réelles quotidiennes."""
+    if isinstance(appliance, dict) and isinstance(appliance.get("temperatures"), dict)             and appliance["temperatures"].get("source") == "odre":
+        region = appliance["temperatures"].get("region", 44)
+        return {**appliance, "temperatures": odre_meteo.load_temperature(start, end, region).to_dict()}
+    return appliance
 
 
 def load_prices(config: dict) -> pd.DataFrame:
@@ -91,16 +100,35 @@ def load_prices(config: dict) -> pd.DataFrame:
 
 
 def load_pv_cf(config: dict) -> pd.DataFrame:
+    """Donnée solaire : ``pv_cf`` (facteur de charge) ou ``irradiance_wm2`` (rayonnement), selon la source.
+
+    - energy_charts : facteur de charge national ;
+    - rte_eco2mix   : facteur de charge national, ou régional avec ``region: 44`` ;
+    - odre_irradiance : rayonnement régional réel (``region``, ``lat``, ``lon``) -> chaîne du plan §4.3 ;
+    - csv_generic   : fichier du client.
+    """
     pv_cfg = config["pv"]
     start, end, _ = _period(config)
     source = pv_cfg.get("source", "energy_charts")
     if source == "energy_charts":
         return energy_charts.load_pv_cf(start, end, installed_mw=pv_cfg.get("installed_mw"))
     if source == "rte_eco2mix":
-        return rte_eco2mix.load_pv_cf(start, end, installed_mw=pv_cfg.get("installed_mw"))
+        return rte_eco2mix.load_pv_cf(start, end, installed_mw=pv_cfg.get("installed_mw"), region=pv_cfg.get("region"))
+    if source == "odre_irradiance":
+        return odre_meteo.load_irradiance(start, end, pv_cfg.get("region", 44), pv_cfg.get("lat"), pv_cfg.get("lon"))
     if source == "csv_generic":
-        return csv_generic.load(_path(config, pv_cfg["path"]), _path(config, pv_cfg["mapping"]))[["pv_cf"]]
-    raise ValueError(f"source PV inconnue : {source!r} (energy_charts, rte_eco2mix, csv_generic)")
+        df = csv_generic.load(_path(config, pv_cfg["path"]), _path(config, pv_cfg["mapping"]))
+        return df[[c for c in ("pv_cf", "irradiance_wm2") if c in df]]
+    raise ValueError(f"source PV inconnue : {source!r} (energy_charts, rte_eco2mix, odre_irradiance, csv_generic)")
+
+
+def pv_power(config: dict, inputs: pd.DataFrame) -> pd.Series:
+    """Production PV (kW) à partir du facteur de charge ou du rayonnement."""
+    pv_cfg = config["pv"]
+    if "irradiance_wm2" in inputs:
+        return pv.power_from_irradiance_kwc(inputs["irradiance_wm2"], pv_cfg["peak_kw"],
+                                            pv_cfg.get("efficiency", 0.20), pv_cfg.get("pmax_w_m2", 250.0))
+    return pv.power_from_cf(inputs["pv_cf"], pv_cfg["peak_kw"])
 
 
 def _strategy_type(config: dict):
@@ -116,20 +144,22 @@ def build_inputs(config: dict) -> pd.DataFrame:
     if needs_spot:
         df = df.join(load_prices(config), how="left")
     if config.get("pv"):
-        df = df.join(load_pv_cf(config), how="left")
-        missing = int(df["pv_cf"].isna().sum())
+        solar = load_pv_cf(config)
+        df = df.join(solar, how="left")
+        col = solar.columns[0]
+        missing = int(df[col].isna().sum())
         if missing:
             max_gap_h = float(config["pv"].get("max_gap_hours", DEFAULT_MAX_PV_GAP_HOURS))
             steps = int(max_gap_h / standard.DT_H)
-            cf = df["pv_cf"]
+            cf = df[col]
             gap_id = cf.notna().cumsum()
             gap_len = cf.isna().groupby(gap_id).transform("sum")
             filled = cf.interpolate(limit_direction="both")
-            df["pv_cf"] = cf.where(cf.notna() | (gap_len > steps), filled)
-            left = int(df["pv_cf"].isna().sum())
+            df[col] = cf.where(cf.notna() | (gap_len > steps), filled)
+            left = int(df[col].isna().sum())
             if left:
-                raise ValueError(f"facteur de charge PV manquant sur {left} pas (trous > {max_gap_h:g} h ; voir pv.max_gap_hours)")
-            warnings.warn(f"pv_cf : {missing} pas manquants interpolés (trous ≤ {max_gap_h:g} h)", stacklevel=2)
+                raise ValueError(f"{col} manquant sur {left} pas (trous > {max_gap_h:g} h ; voir pv.max_gap_hours)")
+            warnings.warn(f"{col} : {missing} pas manquants interpolés (trous ≤ {max_gap_h:g} h)", stacklevel=2)
     return standard.validate(df)
 
 
@@ -163,7 +193,7 @@ class Results:
 def run(config: dict) -> Results:
     inputs = build_inputs(config)
     spot = inputs["spot_eur_mwh"] if "spot_eur_mwh" in inputs else None
-    pv_kw = pv.power_from_cf(inputs["pv_cf"], config["pv"]["peak_kw"]) if config.get("pv") else None
+    pv_kw = pv_power(config, inputs) if config.get("pv") else None
     battery = Battery(**config["battery"]) if config.get("battery") else None
     strategy_cfg = config.get("strategy") or ("surplus_pv" if battery else None)
     if isinstance(strategy_cfg, str):

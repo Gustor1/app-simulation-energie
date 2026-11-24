@@ -26,6 +26,7 @@ from simu.adapters._period import capacity_for_index, chunks, day_bounds_utc
 
 BASE_URL = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets"
 DEFAULT_DATASET = "eco2mix-national-cons-def"
+REGIONAL_DATASET = "eco2mix-regional-cons-def"  # mêmes champs, par région (code_insee_region)
 
 
 def parse_records(records: list[dict], field: str = "solaire") -> pd.Series:
@@ -60,14 +61,20 @@ def _export(dataset: str, where: str, select: str, cache_dir) -> list[dict]:
     )
 
 
-def load_series(start, end, field: str = "solaire", dataset: str = DEFAULT_DATASET,
-                cache_dir: Path | str | None = DEFAULT_CACHE_DIR) -> pd.Series:
-    """Champ éCO2mix (MW) du jour ``start`` au jour ``end`` inclus, au pas de 15 min."""
+def load_series(start, end, field: str = "solaire", dataset: str | None = None,
+                cache_dir: Path | str | None = DEFAULT_CACHE_DIR, region: str | int | None = None) -> pd.Series:
+    """Champ éCO2mix (MW) du jour ``start`` au jour ``end`` inclus, au pas de 15 min.
+
+    ``region`` : code INSEE (ex. 44 = Grand Est) -> jeu régional ; sinon national.
+    """
+    dataset = dataset or (REGIONAL_DATASET if region is not None else DEFAULT_DATASET)
     parts = []
     for c0, c1 in chunks(start, end):
         t0, t1 = day_bounds_utc(c0, c1)
         t1 = t1 + pd.Timedelta("30min")  # point suivant, pour interpoler le dernier quart d'heure
-        where =f"date_heure >= '{t0.isoformat()}' AND date_heure < '{t1.isoformat()}'"
+        where = f"date_heure >= '{t0.isoformat()}' AND date_heure < '{t1.isoformat()}'"
+        if region is not None:
+            where += f" AND code_insee_region='{region}'"
         parts.append(parse_records(_export(dataset, where, f"date_heure,{field}", cache_dir), field))
     s = pd.concat(parts).sort_index()
     s = s[~s.index.duplicated(keep="first")]
@@ -78,21 +85,29 @@ def load_series(start, end, field: str = "solaire", dataset: str = DEFAULT_DATAS
     return s[(s.index >= t0) & (s.index < t1)]
 
 
-def installed_solar_mw(cache_dir: Path | str | None = DEFAULT_CACHE_DIR) -> dict[int, float]:
+def installed_solar_mw(cache_dir: Path | str | None = DEFAULT_CACHE_DIR, region: str | int | None = None) -> dict[int, float]:
+    """Parc solaire installé (MW) par année : national (``parc-prod-par-filiere``) ou régional
+    (``parc-regional-annuel-prod-eolien-solaire``, champ ``parc_installe_solaire``)."""
+    if region is not None:
+        payload = get_json(f"{BASE_URL}/parc-regional-annuel-prod-eolien-solaire/exports/json",
+                           {"where": f"code_insee_region='{region}'", "select": "annee,parc_installe_solaire"},
+                           cache_dir=cache_dir)
+        return parse_capacity(payload, field="parc_installe_solaire")
     payload = get_json(
         f"{BASE_URL}/parc-prod-par-filiere/exports/json", {"select": "annee,parc_solaire"}, cache_dir=cache_dir
     )
     return parse_capacity(payload)
 
 
-def load_pv_cf(start, end, installed_mw: float | None = None, dataset: str = DEFAULT_DATASET,
-               cache_dir: Path | str | None = DEFAULT_CACHE_DIR) -> pd.DataFrame:
-    """Facteur de charge PV national (format standard, colonne ``pv_cf``)."""
-    production = load_series(start, end, "solaire", dataset, cache_dir)
+def load_pv_cf(start, end, installed_mw: float | None = None, dataset: str | None = None,
+               cache_dir: Path | str | None = DEFAULT_CACHE_DIR, region: str | int | None = None) -> pd.DataFrame:
+    """Facteur de charge PV (format standard, colonne ``pv_cf``), national ou régional (``region``)."""
+    production = load_series(start, end, "solaire", dataset, cache_dir, region)
     if installed_mw is not None:
         capacity = pd.Series(float(installed_mw), index=production.index)
     else:
-        capacity = capacity_for_index(production.index, installed_solar_mw(cache_dir), "RTE (ODRÉ)")
+        source = "RTE (ODRÉ)" + (f" région {region}" if region is not None else "")
+        capacity = capacity_for_index(production.index, installed_solar_mw(cache_dir, region), source)
     cf = (production / capacity).clip(lower=0)
     if (cf > 1).any():
         warnings.warn("pv_cf > 1 : puissance installée sous-estimée ?", stacklevel=2)

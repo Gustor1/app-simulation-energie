@@ -35,3 +35,8 @@
   respecte `Retry-After`, espace les appels d'1 s et reprend grâce au cache.
 - Derrière le proxy de l'entreprise, la vérification TLS échoue avec les certificats de Python : le paquet `truststore` (certificats Windows) est utilisé ; la vérification n'est pas désactivée.
 - Cache local : `data/cache/` (non versionné). Une période en cours (jour non terminé) reste en cache telle qu'elle a été lue : supprimer le fichier pour la relire.
+
+## Météo régionale Grand Est (RTE / ODRÉ, vérifié le 24/11/2026)
+- `rayonnement-solaire-vitesse-vent-tri-horaires-regionaux` : rayonnement global horizontal `ssrd03h` (W/m²), toutes les 3 h depuis 2016, moyennes régionales du modèle CEPMMT (producteur Weathernews, Licence Ouverte). **La valeur horodatée T (UTC) est la moyenne sur [T − 3 h ; T[** (corrélation 0,93 avec la production réelle du Grand Est, même décalage en été et en hiver). Grand Est 2025 : 1 345 kWh/m².
+- `temperature-quotidienne-regionale` : `tmin`, `tmax`, `tmoy` (°C) par jour, mise à jour mensuelle. **Le dernier jour de chaque mois est absent** (12 jours en 2025) : interpolé.
+- `eco2mix-regional-cons-def` (champ `solaire`, MW) et `parc-regional-annuel-prod-eolien-solaire` (`parc_installe_solaire`, 2 602 MW en 2025 pour le Grand Est) : production réelle 2025 = 1 068 kWh/kWc. **Anomalie : le 30/06/2025, jusqu'à 3 824 MW publiés** (> parc installé).

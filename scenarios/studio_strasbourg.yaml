@@ -1,0 +1,29 @@
+# Studio FICTIF à Strasbourg, année 2025 – simulation demandée au point du 23/11/2026 (slides 5-6) :
+# conso bottom-up (dont chauffage selon la température réelle), PV d'après le rayonnement réel,
+# batterie, achat/vente au prix spot réel. Sources : RTE/ODRÉ (météo Grand Est), Energy-Charts (prix).
+period: {start: 2025-01-01, end: 2025-12-31, timezone: Europe/Paris}
+
+site:
+  adapter: bottom_up
+  seed: 42
+  appliances:
+    - {type: cyclic,    name: refrigerateur,  power_w: 400,  on_minutes: 7, cycles_per_hour: 2}
+    - {type: schedule,  name: tv,             power_w: 100,  windows: [[18, 23]]}
+    - {type: schedule,  name: eclairage,      power_w: 200,  windows: [[7, 9], [17, 23]]}
+    - {type: daily_run, name: lave_vaisselle, power_w: 1000, duration_h: 2, earliest_h: 19, latest_end_h: 24}
+    - {type: daily_run, name: lave_linge,     power_w: 2000, duration_h: 2, earliest_h: 8,  latest_end_h: 22}
+    # Chauffage électrique : E_jour = k × (20 − T_moy) si T_moy < 15 °C (formule du point).
+    # k = 0,5 kWh/°C/jour est INVENTÉ (≈ 1 450 kWh/an pour un studio) : à valider.
+    - {type: heating,   name: chauffage, k_kwh_per_degc: 0.5, temperatures: {source: odre, region: 44}}
+
+market:
+  prices: {adapter: energy_charts, bzn: FR}
+  offers:
+    - {type: spot, export_price_eur_mwh: 11}   # surplus racheté 1,1 c€/kWh (fiche prix)
+    - {type: fixed, price_eur_mwh: 80}
+
+# PV d'après le rayonnement solaire réel du Grand Est (ODRÉ), chaîne du plan :
+# surface = kWc ÷ 250 W/m², P = rayonnement × 20 % × surface
+pv: {peak_kw: 3, source: odre_irradiance, region: 44, lat: 48.58, lon: 7.75, efficiency: 0.20, pmax_w_m2: 250}
+battery: {capacity_kwh: 5, c_rate: 0.5, cycle_life: 5000}
+strategy: {type: price_threshold}

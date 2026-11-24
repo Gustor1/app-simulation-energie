@@ -1,4 +1,4 @@
-# Rapport de tests – Simulateur énergie (étapes 0 à 8)
+# Rapport de tests – Simulateur énergie (étapes 0 à 8 + simulation Strasbourg)
 
 *24/11/2026 – branche `etapes-0-2`. Données réelles : prix spot et production PV France 2025
 (Energy-Charts, RTE éCO2mix). Clients **fictifs** : un studio et une PME de bureaux (bottom-up).*
@@ -16,6 +16,7 @@ Chiffres bruts : [chiffres.json](chiffres.json).
 | Le spread 80–180 €/MWh du plan est-il confirmé ? | **Oui en grande partie** : médiane 92 €/MWh, 64 % des jours entre 80 et 180 ; mais 35 % des jours sont **sous** 80 |
 | Une batterie est-elle rentable **sur l'énergie seule (spot)** ? | **Non** dans nos cas : temps de retour 16 à 30 ans pour une durée de vie d'environ 15 ans |
 | Qu'est-ce qui peut la rendre rentable ? | **Les pénalités de dépassement** (peak shaving) et **les coûts évités sur chaque kWh acheté** (acheminement + taxes, non modélisés par défaut). Ce sont eux qui décident, pas le spread |
+| La simulation du PowerPoint (Strasbourg, météo réelle) ? | **Faite** : PV d'après le rayonnement réel du Grand Est (1 076 kWh/kWc modélisés contre 1 068 mesurés par RTE), chauffage d'après la température réelle. Mêmes conclusions de rentabilité (voir § Strasbourg) |
 | Le PV est-il rentable ? | Pour la PME : oui avec un prix d'achat bas (12 ans) ; non au prix médian (28 ans) si on ne compte que le spot. Rentable dès qu'on compte ~50 €/MWh de coûts évités (retour 18 ans), nettement à 100 €/MWh (10,5 ans) |
 
 ⚠️ **Lecture importante :** le coût d'achat simulé est **uniquement le prix de l'énergie** (spot,
@@ -412,10 +413,14 @@ revente (et le TURPE évité) décide du bon dimensionnement.**
 | `test_strategie_prix_ne_charge_pas_sans_spread` | pas d'achat pour stocker si le spread ne couvre pas les pertes | ✅ |
 | `test_strategie_prix_vide_la_batterie_meme_si_la_conso_est_faible` | décharge complète même à 1 kW de conso | ✅ |
 | `test_strategie_prix_respecte_la_limite_reseau` | la charge ne dépasse pas la puissance souscrite | ✅ |
+| `test_strategie_prix_anticipe_le_surplus_solaire` | si le soleil du jour suffit à remplir la batterie, rien n'est acheté au réseau | ✅ |
 
 **Règle utilisée :** chaque jour, on charge depuis le réseau sur les quarts d'heure les moins chers
 et on décharge sur les plus chers, en choisissant juste assez de quarts d'heure pour remplir puis
 vider la batterie. On le fait seulement si le spread du jour couvre les pertes. Le surplus PV est toujours stocké.
+**La météo du lendemain étant connue** (hypothèse du PowerPoint), on n'achète au réseau que ce que le surplus solaire
+attendu ne remplira pas. Cette anticipation, ajoutée après la simulation de Strasbourg, rapporte 6 à 11 % de plus et réduit
+d'environ 20 % les achats faits pour remplir la batterie.
 
 ![Semaine prix mars](fig/e5_semaine_prix.png)
 
@@ -439,8 +444,8 @@ charge de midi coïncide avec le creux solaire : stocker l'énergie solaire, c'e
 |---|---|---|---|---|
 | PV 100 kWc seul | 3 841 € | 2 179 € | 6 020 € | – |
 | PV + batterie, surplus PV | 4 185 € | 2 179 € | 6 364 € | 84 |
-| **PV + batterie, prix** | **5 479 €** | 2 179 € | **7 658 €** | 339 |
-| PV + batterie, prix **sans limite de puissance** | 5 473 € | **−1 308 €** | 4 165 € | 338 |
+| **PV + batterie, prix** | **5 593 €** | 2 179 € | **7 772 €** | 337 |
+| PV + batterie, prix **sans limite de puissance** | 5 588 € | **−1 308 €** | 4 280 € | 337 |
 | Batterie seule, prix | 1 828 € | 0 € | 1 828 € | 345 |
 | Batterie seule, surplus PV | 0 € | 0 € | 0 € | 0 |
 | **Batterie seule, peak shaving** | 6 € | **2 640 €** | 2 646 € | 39 |
@@ -518,7 +523,7 @@ cycles, 15 ans), PV 25 ans, OPEX du PV 1,5 %/an, sans actualisation ni dégradat
 | PME : PV 100 kWc | 12 / 28 / 54 ans | 25 ans | **seulement au prix bas** |
 | PME : batterie 100 kWh seule, arbitrage | 16 / 23 / 30 ans | 14,5 ans | **non** |
 | PME : batterie 100 kWh seule, peak shaving | 11 / 16 / 21 ans | 15 ans | **limite** (bas : oui) |
-| PME : batterie ajoutée au PV, arbitrage | 18 / 26 / 34 ans | 14,7 ans | non |
+| PME : batterie ajoutée au PV, arbitrage | 17 / 24 / 31 ans | 14,8 ans | non |
 | Studio : PV 3 kWc | jamais (médian) | 25 ans | non (au spot) |
 | Studio : batterie 5 kWh ajoutée | 36 / 58 / 79 ans | 14,8 ans | non (au spot) |
 
@@ -620,12 +625,259 @@ en 12 ans) ; au prix médian il finit à −14 500 € au bout de 25 ans (toujou
 
 ---
 
+## Simulation Strasbourg / Grand Est (demandée au point du 23/11, slides 5 et 6)
+
+C'est la simulation décrite dans le PowerPoint : **conso bottom-up (avec chauffage selon la température
+réelle) + panneaux calculés d'après le rayonnement solaire réel + batterie + achat/vente au prix du marché**,
+pour un client situé à **Strasbourg**, sur toute l'année 2025.
+
+| Donnée | Source (API, sans clé) |
+|---|---|
+| Rayonnement solaire global, Grand Est, toutes les 3 h | RTE / ODRÉ : `rayonnement-solaire-vitesse-vent-tri-horaires-regionaux` |
+| Température moyenne quotidienne, Grand Est | RTE / ODRÉ : `temperature-quotidienne-regionale` |
+| Production solaire réelle du Grand Est (pour valider) | RTE éCO2mix régional : `eco2mix-regional-cons-def` + parc régional |
+| Prix spot France (Strasbourg est dans la zone de prix France) | Energy-Charts : `price?bzn=FR` |
+
+Lancer : `python -m simu run scenarios/studio_strasbourg.yaml --out results/studio_strasbourg`
+(idem avec `pme_strasbourg.yaml`).
+
+### Tests ajoutés
+
+| Test | Ce qu'il vérifie | Résultat |
+|---|---|---|
+| `test_hauteur_du_soleil_strasbourg` | hauteur du soleil à midi le 21/06 (≈ 65°) et le 21/12 (≈ 18°), nuit < 0 | ✅ |
+| `test_repartition_conserve_l_energie_du_jour` | les blocs de 3 h passés au 1/4 h gardent exactement l'énergie du jour | ✅ |
+| `test_repartition_nulle_la_nuit_et_sans_marche` | rayonnement nul la nuit, pas de marche entre deux blocs, montée régulière le matin | ✅ |
+| `test_lecture_rayonnement_et_format_standard` | lecture de l'API → format standard, maximum vers midi | ✅ |
+| `test_temperature_jour_absent_interpole` | un jour absent du jeu (ex. 31/01) est interpolé et signalé | ✅ |
+| `test_pv_par_rayonnement_chaine_du_plan` | 100 kWc = 400 m² ; 1000 W/m² × 20 % × 400 m² = 80 kW ; exemple 1000 J/cm² | ✅ |
+
+### Du rayonnement à la production des panneaux
+
+![Rayonnement](fig/st_rayonnement_jour.png)
+
+> 📊 **Comment lire :** La donnée publiée (zones jaunes) est une moyenne du soleil reçu toutes les 3 heures,
+> trop grossière pour une simulation au quart d'heure. La courbe orange est ce que le simulateur en fait :
+> la même énergie, répartie selon la hauteur du soleil à Strasbourg (nulle la nuit, maximale à midi).
+> À gauche, une journée d'été ensoleillée ; à droite, une journée d'hiver.
+
+**Méthode (chaîne du PowerPoint, slide 6) :** rayonnement (W/m²) × rendement 20 % × surface, avec
+surface = kWc ÷ Pmax 250 W/m² (100 kWc = 400 m²), plafonné à 250 W/m². Rayonnement sur une surface
+**horizontale** : inclinaison et orientation des panneaux ne sont pas modélisées.
+
+**Points vérifiés sur les données :**
+- La valeur horodatée T est la **moyenne sur les 3 heures précédentes**, en UTC. C'est la convention du
+  modèle météo du CEPMMT (ECMWF), confirmée par la corrélation avec la production réelle, identique l'été et l'hiver.
+- La source attribue quelques W/m² à des blocs de nuit, signe d'un décalage d'environ 30 min. La méthode les
+  reporte sur les heures de jour du même jour, sans perdre d'énergie.
+
+![Validation PV](fig/st_validation_pv.png)
+
+> 📊 **Comment lire :** À gauche, l'énergie produite chaque mois par 1 kWc de panneaux : calculée par le
+> simulateur à partir du rayonnement (orange), mesurée par RTE sur l'ensemble des installations du Grand Est
+> (vert) et sur toute la France (gris). À droite, une semaine de juin quart d'heure par quart d'heure :
+> le modèle (orange) suit bien la production réelle (vert) jour après jour, nuages compris.
+
+| 2025 | Modèle (rayonnement) | Réel Grand Est (RTE) | Réel France |
+|---|---|---|---|
+| Production annuelle par kWc | **1 076 kWh** | **1 068 kWh** | 1 069 kWh |
+| Corrélation au 1/4 h avec le réel Grand Est | 0,93 | – | 0,94 |
+
+**Interprétation.**
+- **Sur l'année, le modèle tombe juste à 1 % près.** La chaîne du PowerPoint, avec Pmax 250 W/m² et un rendement de 20 %, est donc
+  réaliste sans autre correction. Le fait que le facteur 0,2 × 4 m²/kWc = 0,8 corresponde aux pertes réelles est sans doute en partie
+  une coïncidence, mais le résultat est là.
+- **Par mois, il y a un biais saisonnier** : le modèle surestime le printemps et l'été (mai : +23 %) et sous-estime
+  l'automne (octobre : −22 %). C'est cohérent avec un rayonnement **horizontal** : les vrais panneaux sont inclinés
+  et captent mieux le soleil bas d'automne. Une correction d'inclinaison serait la prochaine amélioration.
+- Au quart d'heure, le profil national réel colle un peu mieux (0,94) que le modèle (0,93) : le rayonnement
+  est une moyenne régionale de modèle météo, publiée toutes les 3 h.
+- ⚠️ **Anomalie dans la source RTE :** le **30/06/2025**, éCO2mix régional publie jusqu'à **3 824 MW** de solaire
+  dans le Grand Est, pour un parc de **2 602 MW**. C'est impossible ; ce jour est exclu des corrélations.
+- Les températures ODRÉ n'ont **pas de valeur pour le dernier jour de chaque mois** (31/01, 28/02…) : ces
+  12 jours sont interpolés, et un avertissement le signale.
+
+### Chauffage d'après la température réelle
+
+![Température et chauffage](fig/st_temperature_chauffage.png)
+
+> 📊 **Comment lire :** La ligne bleue est la température moyenne de chaque jour de 2025 dans le Grand Est
+> (axe de droite) ; le pointillé marque 15 °C. Les barres rouges sont la consommation de chauffage du studio
+> chaque jour (axe de gauche). Elles n'existent que les jours sous 15 °C et grandissent quand il fait froid :
+> c'est la formule du PowerPoint, E = k × (20 °C − température).
+
+| 2025, Grand Est | Valeur |
+|---|---|
+| Température moyenne quotidienne | de −2,8 °C à 28,6 °C |
+| Jours sous 15 °C (chauffage) | 237 |
+| Σ (20 − T) sur ces jours | 2 900 °C·jour |
+| Chauffage du studio avec k = 0,5 kWh/°C/jour | **1 450 kWh/an** |
+
+⚠️ **k = 0,5 est inventé** (le PowerPoint ne donne pas de valeur). Avec le chauffage, le studio consomme
+**5 224 kWh/an (14,3 kWh/jour)**, au-dessus des 4 300 kWh/an du PowerPoint. Soit le chauffage du studio de
+référence n'est pas électrique, soit les autres appareils sont surestimés (frigo à 2,24 kWh/jour, machines tous les jours).
+
+![Studio janvier conso](fig/st_studio_conso_hiver.png)
+
+> 📊 **Comment lire :** La consommation du studio pendant une semaine de janvier, appareil par appareil
+> (couleurs empilées). Le chauffage forme un socle permanent, plus épais les jours froids, auquel s'ajoutent
+> les pics des machines et de l'éclairage. À droite, la journée moyenne de cette semaine.
+
+### Résultats
+
+| 2025, Strasbourg | Studio (3 kWc + 5 kWh) | PME de bureaux (100 kWc + 100 kWh) |
+|---|---|---|
+| Consommation | 5 224 kWh (dont 1 450 de chauffage) | 287 739 kWh |
+| Production PV | 3 229 kWh | 107 621 kWh |
+| Autoconsommation / autoproduction | 72 % / 42 % | 90 % / 33 % |
+| Cycles de batterie par an | 360 | 340 |
+| Coût de l'énergie au spot, sans → avec équipement | 379 € → 200 € | 16 860 € → 11 578 € |
+| Pénalités de dépassement, sans → avec | – | 2 640 € → 674 € |
+| Gain annuel dû au PV | 87 € | 5 503 € (dont pénalités évitées) |
+| Gain annuel dû à la batterie (en plus du PV) | 92 € | 1 744 € |
+| Retour du PV, prix bas / médian / haut (durée de vie 25 ans) | 139 ans / 509 ans / jamais | **13** / 32 / 64 ans |
+| Retour de la batterie, prix bas / médian / haut (durée de vie ≈ 14 ans) | 33 / 52 / 71 ans | 17 / 24 / 32 ans |
+
+**Interprétation.**
+- **Les conclusions sont les mêmes qu'avec le profil national** : en 2025, Strasbourg a produit autant
+  par kWc que la moyenne française. Si l'on ne compte que le prix de l'énergie au spot, **le PV de la PME est
+  rentable seulement au prix bas** (13 ans) et **la batterie ne l'est dans aucun cas**.
+- **Pour le studio, rien n'est rentable au prix spot** : l'électricité y coûte en moyenne ~72 €/MWh, et un
+  particulier paie en réalité bien plus (acheminement + taxes). C'est exactement la limite expliquée en § 7 : avec
+  ces coûts, la sensibilité montre un retour d'environ 14 ans pour la batterie du studio à 200 €/MWh de surcoût évité.
+- Le chauffage d'hiver rend la batterie utile **même sans soleil** : elle se charge la nuit, quand le prix est plus bas, et
+  restitue au pic du soir (graphique ci-dessous).
+
+![Studio hiver batterie](fig/st_studio_hiver_batterie.png)
+
+> 📊 **Comment lire :** La batterie du studio pendant une semaine de janvier. En haut, son niveau de charge ;
+> en bas, ses charges depuis le réseau (bleu) ou le soleil (jaune, très faibles en hiver) et ses décharges (rouge),
+> avec le prix du marché (ligne violette). Elle se remplit chaque nuit quand le prix est bas et se vide le soir
+> quand il est haut : en hiver, c'est le prix et non le soleil qui la fait travailler.
+
+### Les 7 graphiques du PowerPoint – studio de Strasbourg
+
+#### 1. Utilisation du solaire
+
+![](fig/st_studio/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 3 kWc du studio : consommés
+> directement (orange), stockés dans la batterie (vert foncé) ou revendus (vert clair). L'été, une grande partie est
+> revendue car le studio consomme peu en journée.
+
+#### 2. Utilisation de la batterie
+
+![](fig/st_studio/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin. En haut, le niveau de charge de la batterie ; en bas, ses charges
+> (jaune = soleil, bleu = réseau) et décharges (rouge), avec le prix du marché (violet). L'été, elle se remplit
+> surtout avec le soleil de midi et se vide le soir.
+
+#### 3. Courbe de charge brute
+
+![](fig/st_studio/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** La consommation du studio, sans équipement, pendant une semaine de juin (à gauche) et
+> la journée moyenne de l'année (à droite, avec la plage où se trouvent 80 % des jours). En été, il n'y a pas de chauffage.
+
+#### 4. Ce qu'on achète au réseau
+
+![](fig/st_studio/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** La puissance achetée au réseau pendant une semaine de juin, sans équipement (rouge) et
+> avec panneaux + batterie (bleu). Sous zéro (vert), le studio revend son surplus solaire. Avec l'équipement, les
+> achats du soir diminuent fortement (la batterie, remplie par le soleil, les couvre). Les pics bleus restants
+> sont des soirées où la batterie de 5 kWh est déjà vide quand le lave-vaisselle démarre. En juin, elle ne se
+> recharge pas au réseau la nuit : le soleil du lendemain suffit.
+
+#### 5. Coût de l'énergie
+
+![](fig/st_studio/5_cout_energie.png)
+
+> 📊 **Comment lire :** La facture d'énergie du studio mois par mois, sans (rouge) et avec équipement (bleu).
+> L'hiver coûte le plus cher à cause du chauffage et des prix élevés. Seul le prix de l'énergie est compté,
+> sans acheminement ni taxes. Dans ce graphique, le surplus revendu est compté au prix du marché ; dans le
+> tableau ci-dessus, au tarif de rachat de 1,1 c€/kWh, d'où un léger écart.
+
+#### 6. Coût de la batterie
+
+![](fig/st_studio/6_cout_batterie.png)
+
+> 📊 **Comment lire :** À gauche, le prix de la batterie de 5 kWh selon trois devis. À droite, l'argent cumulé
+> au fil des ans : on part du prix payé et on ajoute chaque année ce que la batterie fait gagner. Si la ligne
+> ne repasse pas au-dessus de zéro avant la fin, la batterie n'est pas remboursée ; c'est le cas ici.
+
+#### 7. Coût des panneaux
+
+![](fig/st_studio/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 3 kWc de panneaux sur 25 ans. Au prix spot seul, le gain
+> (≈ 87 €/an) couvre à peine l'entretien : les lignes restent très en dessous de zéro.
+
+### Les 7 graphiques du PowerPoint – PME de Strasbourg
+
+#### 1. Utilisation du solaire
+
+![](fig/st_pme/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 100 kWc de la PME :
+> consommés directement (orange), stockés (vert foncé) ou revendus (vert clair). Presque tout est consommé
+> sur place, car les bureaux consomment en journée.
+
+#### 2. Utilisation de la batterie
+
+![](fig/st_pme/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin. En haut, le niveau de charge de la batterie de 100 kWh ; en bas,
+> ses charges (jaune = soleil, bleu = réseau) et décharges (rouge), avec le prix du marché (violet). Elle fait
+> environ un cycle par jour, en achetant aux heures creuses et en restituant aux heures chères.
+
+#### 3. Courbe de charge brute
+
+![](fig/st_pme/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** La consommation de la PME sans équipement : une semaine de juin à gauche (journées de
+> bureau, pics de cantine, week-end au minimum) et la journée moyenne de l'année à droite.
+
+#### 4. Ce qu'on achète au réseau
+
+![](fig/st_pme/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** La puissance achetée au réseau sur une semaine de juin, sans équipement (rouge) et avec
+> panneaux + batterie (bleu) ; sous zéro (vert), la PME revend. Le pointillé est la puissance prévue au contrat
+> (90 kW) : la dépasser coûte une pénalité.
+
+#### 5. Coût de l'énergie
+
+![](fig/st_pme/5_cout_energie.png)
+
+> 📊 **Comment lire :** La facture d'énergie de la PME mois par mois, sans (rouge) et avec équipement (bleu).
+> Le titre donne l'économie annuelle sur l'énergie, hors pénalités, acheminement et taxes.
+
+#### 6. Coût de la batterie
+
+![](fig/st_pme/6_cout_batterie.png)
+
+> 📊 **Comment lire :** À gauche, le prix de la batterie de 100 kWh selon trois devis ; à droite, l'argent
+> cumulé au fil des ans, en partant du prix payé et en ajoutant le gain apporté par la batterie en plus des panneaux.
+> Aucune ligne ne repasse au-dessus de zéro en ≈ 15 ans : la batterie n'est pas remboursée.
+
+#### 7. Coût des panneaux
+
+![](fig/st_pme/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 100 kWc de panneaux, sur 25 ans. La ligne verte (prix bas)
+> passe au-dessus de zéro vers 13 ans : les panneaux sont alors remboursés. Aux prix moyen et haut, ils ne le
+> sont pas en 25 ans si l'on ne compte que le prix de l'énergie.
+
+---
+
 ## Limites connues (à garder en tête en lisant les chiffres)
 
 1. **Clients inventés** (studio, PME) et **pénalité de dépassement inventée** (10 €/kW/mois).
 2. **Pas d'acheminement ni de taxes** dans le coût par défaut : gains de l'autoconsommation sous-estimés (§ 7).
 3. Une seule année (2025), répétée sur toute la durée de vie : pas d'actualisation, pas d'inflation, pas de dégradation.
-4. Profil PV **national** (lissé) ; pas encore de variante par site (Open-Meteo, PVGIS…).
+4. PV : profil national, ou rayonnement **régional** (Grand Est) sur surface horizontale : ni inclinaison ni orientation des panneaux.
 5. Règles de pilotage simples, non optimales (chronologie des prix ignorée ; batterie > 200 kWh mal exploitée).
 6. Coût unitaire pris dans la classe de taille la plus proche (10 / 100 / 1000) : marches d'escalier entre les tailles.
 7. Écart de prix du PV : le médian de la fiche pour 100 kWc (120 k€) est au-dessus du « coût moyen 80–100 k€ en toiture simple » cité dans la même fiche.
