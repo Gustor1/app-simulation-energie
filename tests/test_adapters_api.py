@@ -177,3 +177,29 @@ def test_reseau_rte_pv(tmp_path):
     assert len(df) == 2 * 96
     assert df["pv_cf"].notna().all()
     assert 0.2 < df["pv_cf"].max() <= 1
+
+
+def test_enedis_open_site_moyen_tous_profils_confondus():
+    from simu.adapters import enedis_open
+
+    # deux sous-profils à la même demi-heure : (100 000 + 20 000) Wh pour (10 + 2) sites
+    # -> 10 000 Wh par site en 30 min -> 20 kW
+    rows = [
+        {"horodate": "2025-01-01T00:00:00Z", "profil": "ENT3", "nb_points_soutirage": 10, "total_energie_soutiree_wh": 100_000},
+        {"horodate": "2025-01-01T00:00:00Z", "profil": "ENT1", "nb_points_soutirage": 2, "total_energie_soutiree_wh": 20_000},
+        {"horodate": "2025-01-01T00:30:00Z", "profil": "ENT3", "nb_points_soutirage": 10, "total_energie_soutiree_wh": 50_000},
+    ]
+    kw = enedis_open.parse_lines(rows)
+    assert list(kw) == [20.0, 10.0]
+    assert str(kw.index.tz) == "UTC"
+
+
+@pytest.mark.network
+def test_enedis_open_vraie_courbe_industrie_grand_est():
+    from simu.adapters import enedis_open
+
+    df = enedis_open.load_profile("2025-06-02", "2025-06-02", region=44, sector="S2: Industrie",
+                                  power_range="P4: ]250-1000] kVA", annual_kwh=365_000)
+    standard.validate(df)
+    assert len(df) == 96 and df["load_kw"].notna().all()
+    assert standard.energy_kwh(df["load_kw"]) == pytest.approx(1000)  # 365 000 kWh/an -> 1 000 kWh sur 1 jour

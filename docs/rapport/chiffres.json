@@ -1028,6 +1028,304 @@
    }
   }
  },
+ "reel": {
+  "studio": {
+   "bottom_up": {
+    "conso_mwh": 4.82,
+    "pointe_kw": 3.95,
+    "pv_mwh": 3.23,
+    "autoconso": 0.7,
+    "autoproduction": 0.44,
+    "cycles": 360.47,
+    "cout_avant": 712.34,
+    "cout_apres": 380.28,
+    "penalite_avant": null,
+    "penalite_apres": null,
+    "pointe_apres": 4.64,
+    "gain_pv": 180.59,
+    "gain_batterie": 151.48,
+    "bat_vie": 13.87,
+    "pv_retour": {
+     "bas": 31.94,
+     "median": 49.0,
+     "haut": 73.18
+    },
+    "bat_retour": {
+     "bas": 19.8,
+     "median": 31.36,
+     "haut": 42.91
+    },
+    "capex_pv": {
+     "bas": 3900.0,
+     "median": 5100.0,
+     "haut": 6300.0
+    },
+    "capex_bat": {
+     "bas": 3000.0,
+     "median": 4750.0,
+     "haut": 6500.0
+    }
+   },
+   "enedis": {
+    "conso_mwh": 4.3,
+    "pointe_kw": 1.08,
+    "pv_mwh": 3.23,
+    "autoconso": 0.78,
+    "autoproduction": 0.55,
+    "cycles": 349.04,
+    "cout_avant": 615.41,
+    "cout_apres": 266.55,
+    "penalite_avant": null,
+    "penalite_apres": null,
+    "pointe_apres": 3.34,
+    "gain_pv": 224.24,
+    "gain_batterie": 124.62,
+    "bat_vie": 14.33,
+    "pv_retour": {
+     "bas": 23.53,
+     "median": 34.52,
+     "haut": 48.56
+    },
+    "bat_retour": {
+     "bas": 24.07,
+     "median": 38.12,
+     "haut": 52.16
+    },
+    "capex_pv": {
+     "bas": 3900.0,
+     "median": 5100.0,
+     "haut": 6300.0
+    },
+    "capex_bat": {
+     "bas": 3000.0,
+     "median": 4750.0,
+     "haut": 6500.0
+    }
+   }
+  },
+  "pme": {
+   "bottom_up": {
+    "conso_mwh": 287.74,
+    "pointe_kw": 112.0,
+    "pv_mwh": 107.62,
+    "autoconso": 0.9,
+    "autoproduction": 0.33,
+    "cycles": 339.13,
+    "cout_avant": 31247.3,
+    "cout_apres": 21244.83,
+    "penalite_avant": 1833.58,
+    "penalite_apres": 580.17,
+    "pointe_apres": 107.72,
+    "gain_pv": 9380.76,
+    "gain_batterie": 1875.13,
+    "bat_vie": 14.74,
+    "pv_retour": {
+     "bas": 7.07,
+     "median": 15.83,
+     "haut": 26.94
+    },
+    "bat_retour": {
+     "bas": 16.0,
+     "median": 22.67,
+     "haut": 29.33
+    },
+    "capex_pv": {
+     "bas": 60000.0,
+     "median": 120000.0,
+     "haut": 180000.0
+    },
+    "capex_bat": {
+     "bas": 30000.0,
+     "median": 42500.0,
+     "haut": 55000.0
+    }
+   },
+   "enedis": {
+    "conso_mwh": 287.74,
+    "pointe_kw": 69.13,
+    "pv_mwh": 107.62,
+    "autoconso": 0.94,
+    "autoproduction": 0.34,
+    "cycles": 339.21,
+    "cout_avant": 33400.76,
+    "cout_apres": 23071.55,
+    "penalite_avant": 0.0,
+    "penalite_apres": 0.0,
+    "pointe_apres": 90.0,
+    "gain_pv": 8186.26,
+    "gain_batterie": 2142.95,
+    "bat_vie": 14.74,
+    "pv_retour": {
+     "bas": 8.23,
+     "median": 18.79,
+     "haut": 32.81
+    },
+    "bat_retour": {
+     "bas": 14.0,
+     "median": 19.83,
+     "haut": 25.67
+    },
+    "capex_pv": {
+     "bas": 60000.0,
+     "median": 120000.0,
+     "haut": 180000.0
+    },
+    "capex_bat": {
+     "bas": 30000.0,
+     "median": 42500.0,
+     "haut": 55000.0
+    }
+   }
+  },
+  "hopital": {
+   "bottom_up": {
+    "conso_mwh": 2370.91,
+    "pointe_kw": 500.0,
+    "pv_mwh": 269.05,
+    "autoconso": 1.0,
+    "autoproduction": 0.11,
+    "cycles": 258.44,
+    "cout_avant": 257823.29,
+    "cout_apres": 232058.71,
+    "penalite_avant": 14966.46,
+    "penalite_apres": 198.56,
+    "pointe_apres": 469.01,
+    "gain_pv": 33459.33,
+    "gain_batterie": 7073.16,
+    "bat_vie": 15.0,
+    "pv_retour": {
+     "bas": 4.81,
+     "median": 10.36,
+     "haut": 16.85
+    },
+    "bat_retour": {
+     "bas": 10.6,
+     "median": 15.02,
+     "haut": 19.44
+    },
+    "capex_pv": {
+     "bas": 150000.0,
+     "median": 300000.0,
+     "haut": 450000.0
+    },
+    "capex_bat": {
+     "bas": 75000.0,
+     "median": 106250.0,
+     "haut": 137500.0
+    }
+   },
+   "enedis": {
+    "conso_mwh": 2370.91,
+    "pointe_kw": 428.43,
+    "pv_mwh": 269.05,
+    "autoconso": 1.0,
+    "autoproduction": 0.11,
+    "cycles": 246.27,
+    "cout_avant": 269268.52,
+    "cout_apres": 243356.75,
+    "penalite_avant": 1377.51,
+    "penalite_apres": 0.0,
+    "pointe_apres": 400.0,
+    "gain_pv": 23633.71,
+    "gain_batterie": 3655.57,
+    "bat_vie": 15.0,
+    "pv_retour": {
+     "bas": 7.01,
+     "median": 15.68,
+     "haut": 26.65
+    },
+    "bat_retour": {
+     "bas": 20.52,
+     "median": 29.07,
+     "haut": 37.61
+    },
+    "capex_pv": {
+     "bas": 150000.0,
+     "median": 300000.0,
+     "haut": 450000.0
+    },
+    "capex_bat": {
+     "bas": 75000.0,
+     "median": 106250.0,
+     "haut": 137500.0
+    }
+   }
+  },
+  "usine": {
+   "bottom_up": {
+    "conso_mwh": 2609.1,
+    "pointe_kw": 790.0,
+    "pv_mwh": 538.11,
+    "autoconso": 0.94,
+    "autoproduction": 0.18,
+    "cycles": 257.87,
+    "cout_avant": 298150.97,
+    "cout_apres": 243501.31,
+    "penalite_avant": 9571.21,
+    "penalite_apres": 43.44,
+    "pointe_apres": 723.49,
+    "gain_pv": 45433.63,
+    "gain_batterie": 18743.8,
+    "bat_vie": 15.0,
+    "pv_retour": {
+     "bas": 9.42,
+     "median": 12.79,
+     "haut": 16.47
+    },
+    "bat_retour": {
+     "bas": 13.34,
+     "median": 17.34,
+     "haut": 21.34
+    },
+    "capex_pv": {
+     "bas": 375000.0,
+     "median": 487500.0,
+     "haut": 600000.0
+    },
+    "capex_bat": {
+     "bas": 250000.0,
+     "median": 325000.0,
+     "haut": 400000.0
+    }
+   },
+   "enedis": {
+    "conso_mwh": 2609.1,
+    "pointe_kw": 558.31,
+    "pv_mwh": 538.11,
+    "autoconso": 0.98,
+    "autoproduction": 0.19,
+    "cycles": 252.84,
+    "cout_avant": 298744.32,
+    "cout_apres": 241692.64,
+    "penalite_avant": 0.0,
+    "penalite_apres": 0.0,
+    "pointe_apres": 650.0,
+    "gain_pv": 43328.46,
+    "gain_batterie": 13723.22,
+    "bat_vie": 15.0,
+    "pv_retour": {
+     "bas": 9.95,
+     "median": 13.54,
+     "haut": 17.48
+    },
+    "bat_retour": {
+     "bas": 18.22,
+     "median": 23.68,
+     "haut": 29.15
+    },
+    "capex_pv": {
+     "bas": 375000.0,
+     "median": 487500.0,
+     "haut": 600000.0
+    },
+    "capex_bat": {
+     "bas": 250000.0,
+     "median": 325000.0,
+     "haut": 400000.0
+    }
+   }
+  }
+ },
  "strasbourg": {
   "ghi_kwh_m2": 1345.27,
   "productible_modele": 1076.21,

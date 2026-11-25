@@ -40,3 +40,12 @@
 - `rayonnement-solaire-vitesse-vent-tri-horaires-regionaux` : rayonnement global horizontal `ssrd03h` (W/m²), toutes les 3 h depuis 2016, moyennes régionales du modèle CEPMMT (producteur Weathernews, Licence Ouverte). **La valeur horodatée T (UTC) est la moyenne sur [T − 3 h ; T[** (corrélation 0,93 avec la production réelle du Grand Est, même décalage en été et en hiver). Grand Est 2025 : 1 345 kWh/m².
 - `temperature-quotidienne-regionale` : `tmin`, `tmax`, `tmoy` (°C) par jour, mise à jour mensuelle. **Le dernier jour de chaque mois est absent** (12 jours en 2025) : interpolé.
 - `eco2mix-regional-cons-def` (champ `solaire`, MW) et `parc-regional-annuel-prod-eolien-solaire` (`parc_installe_solaire`, 2 602 MW en 2025 pour le Grand Est) : production réelle 2025 = 1 068 kWh/kWc. **Anomalie : le 30/06/2025, jusqu'à 3 824 MW publiés** (> parc installé).
+
+## Courbes de charge réelles – Enedis open data (vérifié le 25/11/2026)
+- API data-fair sans clé : `https://opendata.enedis.fr/data-fair/api/v1/datasets/<jeu>/lines`
+  (filtres `<champ>_eq`, tri `sort=horodate`, pages de 10 000 lignes avec curseur `next`).
+  L'ancienne adresse `data.enedis.fr` ne répond plus ; data.gouv.fr renvoie vers la nouvelle.
+- `conso-sup36-region` : sites > 36 kVA, pas 30 min, par région (`code_region`), secteur (`S1` à `S4`), plage de
+  puissance (`P1` à `P7`) ; de juillet 2023 à septembre 2026 au 25/11/2026.
+- `conso-inf36` : sites ≤ 36 kVA, maille nationale, par profil (`RES1`… `PRO5`) et plage de puissance.
+- Courbe d'un site moyen = `total_energie_soutiree_wh` ÷ `nb_points_soutirage` (sous-profils additionnés).

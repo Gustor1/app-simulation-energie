@@ -24,7 +24,7 @@ incomplète, **j'en ai choisi une pour chacune**, d'après une source publique q
 | **Acheminement et taxes, professionnel** | **+ 50 €/MWh** | Mêmes postes, mais moins chers par kWh pour un professionnel. C'est un ordre de grandeur. |
 | **Revente du surplus** | particulier : **11 €/MWh** (1,1 c€/kWh) ; professionnel : **prix spot** | Particulier (≤ 9 kWc) : tarif d'obligation d'achat EDF OA depuis juin 2026. Professionnel : surplus vendu au marché par un intermédiaire (agrégateur). |
 | **Pénalité de dépassement** | **12,41 € par heure** passée au-dessus de la puissance souscrite | C'est la règle réelle (CMDPS) des clients « C4 » (36 à 250 kVA) : on paie selon la **durée** du dépassement. Elle remplace mes 10 €/kW/mois, qui étaient inventés. L'hôpital et l'usine dépassent 250 kVA et relèvent en réalité d'une autre formule ; j'applique la même par simplicité. |
-| **Courbes de consommation** | profils inventés, appareil par appareil | Aucune vraie courbe par secteur n'est disponible en open data (l'ancienne API d'Enedis ne répond plus). |
+| **Courbes de consommation** | deux versions : inventée appareil par appareil (bottom-up), et **réelle** (open data Enedis) | Le PowerPoint demande les deux (« Opensource » et « bottom-up »). Les courbes réelles Enedis sont celles d'un **site moyen** de chaque secteur : la forme est réelle, mais les pointes d'un vrai site sont gommées (§ Courbes réelles). |
 
 **Fiabilité de ces valeurs :**
 - **Pénalité : vérifiée** dans la [grille officielle Enedis TURPE 7](https://www.enedis.fr/sites/default/files/documents/pdf/brochure-tarifaire-turpe-7.pdf).
@@ -56,7 +56,7 @@ Autres sources consultées : [Selectra, dépassement de puissance](https://entre
 
 | Question | Réponse sur 2025 (clients fictifs) |
 |---|---|
-| Les tests passent-ils ? | **58 / 58** (dont 3 qui interrogent les vraies API) |
+| Les tests passent-ils ? | **60 / 60** (dont 4 qui interrogent les vraies API) |
 | Le spread 80–180 €/MWh du plan est-il confirmé ? | **Oui en grande partie** : médiane 92 €/MWh, 64 % des jours entre 80 et 180 ; mais 35 % des jours sont **sous** 80 |
 | Une batterie est-elle rentable **sur l'énergie seule (spot)** ? | **Non** dans nos cas : temps de retour 16 à 30 ans pour une durée de vie d'environ 15 ans |
 | Qu'est-ce qui peut la rendre rentable ? | **Les pénalités de dépassement** (peak shaving) et **les coûts évités sur chaque kWh acheté** (acheminement + taxes, comptés dans la simulation de Strasbourg). Ce sont eux qui décident, pas le spread |
@@ -929,10 +929,8 @@ Le PowerPoint cite quatre types de clients : **usine, bureaux, hôpital, particu
 particulier (studio) sont traités plus haut ; voici l'hôpital et l'usine, avec la même météo réelle de
 Strasbourg 2025 (PV d'après le rayonnement RTE/ODRÉ) et les prix spot réels.
 
-**Courbes de charge :** inventées en bottom-up, comme les autres clients. J'ai cherché des courbes réelles par
-secteur d'activité en open data. L'ancienne API d'Enedis (`data.enedis.fr`) ne répond plus, et ODRÉ ne publie
-que des consommations **quotidiennes** par secteur, trop grossières pour la forme d'une journée.
-Ces profils sont donc à remplacer par de vraies courbes dès qu'on en aura (adaptateur CSV prêt).
+**Courbes de charge :** inventées en bottom-up, comme les autres clients. La même simulation avec les **vraies
+courbes Enedis** du secteur est au § « Courbes de charge réelles (open data Enedis) ».
 
 | Client fictif | Composition | Conso / pointe | Équipement simulé |
 |---|---|---|---|
@@ -1160,6 +1158,75 @@ Il faut maintenant **confirmer la grille tarifaire réelle**, en particulier la 
 
 ---
 
+## Courbes de charge réelles (open data Enedis)
+
+La slide 5 du PowerPoint demande des courbes de charge **open source** en plus de la simulation bottom-up.
+Enedis publie gratuitement, au pas de 30 min, la consommation réelle de **segments de clients**, sur
+[opendata.enedis.fr](https://opendata.enedis.fr) (API sans clé, adaptateur `enedis_open`) :
+
+| Client | Segment Enedis utilisé (2025) |
+|---|---|
+| Studio | particuliers, option base, 3 à 6 kVA, France entière (pas de détail par région sous 36 kVA) |
+| PME de bureaux | tertiaire, 36 à 120 kVA, Grand Est |
+| Hôpital | tertiaire, 250 à 1 000 kVA, Grand Est (il n'existe pas de catégorie « hôpital ») |
+| Usine | industrie, 250 à 1 000 kVA, Grand Est |
+
+**Méthode.**
+- Pour chaque demi-heure : énergie consommée par tout le segment ÷ nombre de sites = courbe d'un **site moyen**.
+- La courbe est ensuite mise à l'échelle de la consommation annuelle du client : même énergie que la courbe inventée
+  (4 300 kWh/an pour le studio, comme dans le PowerPoint).
+- On garde donc la **forme réelle** de la consommation, pas son niveau.
+- Équipement, prix, choix et pilotage sont identiques aux scénarios `*_strasbourg.yaml` ; seule la consommation change
+  (scénarios `*_strasbourg_enedis.yaml`).
+
+| Test | Ce qu'il vérifie | Résultat |
+|---|---|---|
+| `test_enedis_open_site_moyen_tous_profils_confondus` | (100 000 + 20 000) Wh pour 12 sites en 30 min → 20 kW par site | ✅ |
+| `test_enedis_open_vraie_courbe_industrie_grand_est` | vraie API : 96 quarts d'heure sans trou, 365 000 kWh/an → 1 000 kWh sur un jour | ✅ |
+
+![Comparaison journée](fig/reel_comparaison_jour.png)
+
+> 📊 **Comment lire :** Pour chaque client, la consommation d'une journée de semaine moyenne : en rouge la courbe inventée
+> appareil par appareil, en bleu la vraie courbe Enedis du même secteur, ramenée à la même consommation sur l'année.
+> Les deux ont les mêmes heures d'activité, mais la vraie courbe consomme beaucoup plus la nuit et monte plus doucement.
+
+![Comparaison semaine](fig/reel_comparaison_semaine.png)
+
+> 📊 **Comment lire :** Une semaine de janvier quart d'heure par quart d'heure. La courbe inventée (rouge) est en créneaux
+> avec des pics, la vraie courbe (bleu) est lisse, car elle additionne des centaines de sites dont les pics ne tombent pas
+> au même moment. La légende donne la pointe de l'année : elle est bien plus basse avec la vraie courbe.
+
+**Ce que les vraies courbes apprennent sur mes profils inventés.**
+- **La nuit et le week-end, un vrai site consomme beaucoup plus** que dans mes profils : environ 240 kW la nuit pour
+  l'industrie au lieu de 75 kW, et l'activité continue le samedi. Mes profils concentraient trop la consommation en journée.
+- **Les pointes sont bien plus basses** (usine 558 kW au lieu de 790 ; PME 69 kW au lieu de 112). C'est en partie un
+  artefact : une moyenne de centaines de sites gomme les pointes d'un site réel.
+
+| 2025, Strasbourg (inventée → réelle) | Studio | PME | Hôpital | Usine |
+|---|---|---|---|---|
+| Pointe annuelle | 4,0 → 1,1 kW | 112 → 69 kW | 500 → 428 kW | 790 → 558 kW |
+| Pénalités sans équipement | – | 1 834 → 0 € | 14 966 → 1 378 € | 9 571 → 0 € |
+| Autoconsommation du PV | 70 → 78 % | 90 → 94 % | 100 → 100 % | 94 → 98 % |
+| Gain annuel dû au PV | 181 → 224 € | 9 381 → 8 186 € | 33 459 → 23 634 € | 45 434 → 43 328 € |
+| Gain annuel dû à la batterie | 151 → 125 € | 1 875 → 2 143 € | 7 073 → 3 656 € | 18 744 → 13 723 € |
+| Retour du PV, prix bas / médian / haut (25 ans) | 32 / 49 / 73 → 24 / 35 / 49 ans | 7 / 16 / 27 → 8 / 19 / 33 ans | 5 / 10 / 17 → 7 / 16 / 27 ans | 9 / 13 / 16 → 10 / 14 / 17 ans |
+| Retour de la batterie, prix bas / médian / haut (≈ 15 ans) | 20 / 31 / 43 → 24 / 38 / 52 ans | 16 / 23 / 29 → 14 / 20 / 26 ans | 11 / 15 / 19 → 21 / 29 / 38 ans | 13 / 17 / 21 → 18 / 24 / 29 ans |
+
+**Interprétation.**
+- **Le PV reste rentable chez les trois professionnels**, avec des retours proches. Il dépend surtout de la part du soleil
+  consommée sur place, qui est la même, ou meilleure, avec les vraies courbes.
+- **La batterie n'est plus rentable nulle part** avec les vraies courbes. Les pointes d'un site moyen étant gommées, il n'y
+  a presque plus de pénalités à éviter, et il ne reste que l'arbitrage, qui ne suffit pas.
+- **La vérité pour un vrai client est entre les deux.** Un vrai site a des pointes, comme ma courbe inventée, mais aussi
+  une consommation de nuit, comme la courbe Enedis. **Seule la vraie courbe d'un client** (son compteur, ou un CSV via
+  l'adaptateur générique) permet de trancher pour la batterie.
+
+**Les 7 graphiques du PowerPoint** existent aussi pour chaque client avec la vraie courbe. Ils se lisent comme ceux
+plus haut : [studio](fig/reel_studio/), [PME](fig/reel_pme/), [hôpital](fig/reel_hopital/), [usine](fig/reel_usine/).
+On les obtient avec `python -m simu run scenarios/usine_strasbourg_enedis.yaml --out results/usine_reel`.
+
+---
+
 ## Limites connues (à garder en tête en lisant les chiffres)
 
 1. **Clients inventés** (studio, PME, hôpital, usine ; jours fériés non modélisés).
@@ -1172,7 +1239,7 @@ Il faut maintenant **confirmer la grille tarifaire réelle**, en particulier la 
 3. Une seule année (2025), répétée sur toute la durée de vie : pas d'actualisation, pas d'inflation, pas de dégradation.
 4. PV : profil national, ou rayonnement **régional** (Grand Est) sur surface horizontale : ni inclinaison ni orientation des panneaux.
 5. Règles de pilotage simples, non optimales : chronologie des prix ignorée, batterie > 200 kWh mal exploitée en arbitrage seul, réserve d'écrêtage fixée à 30 % sans optimisation.
-8. Courbes de charge sectorielles réelles non utilisées : l'API open data d'Enedis ne répond plus, et ODRÉ ne publie que des consommations quotidiennes par secteur.
+8. Courbes réelles Enedis = **site moyen** d'un segment (des centaines de sites additionnés) : forme réelle, mais pointes gommées ; pas de catégorie « hôpital » (tertiaire), et pas de maille régionale pour les particuliers.
 9. Chauffage : k = 0,5 kWh/°C/jour choisi, pas mesuré ; hôpital et usine supposés chauffés autrement qu'à l'électricité.
 6. Coût unitaire pris dans la classe de taille la plus proche (10 / 100 / 1000) : marches d'escalier entre les tailles.
 7. Écart de prix du PV : le médian de la fiche pour 100 kWc (120 k€) est au-dessus du « coût moyen 80–100 k€ en toiture simple » cité dans la même fiche.
@@ -1183,5 +1250,5 @@ Il faut maintenant **confirmer la grille tarifaire réelle**, en particulier la 
 - **Acheminement et taxes :** confirmer 75 €/MWh (particulier) et 50 €/MWh (pro) avec la grille officielle.
 - **Revente du surplus :** 11 €/MWh pour le particulier (EDF OA), spot pour le pro.
 - **Frigo** à 1 fois par heure et **chauffage** k = 0,5 : à confirmer.
-- **Profils de consommation** : vraies courbes de charge (CSV, Linky, données d'un client) pour remplacer les profils inventés.
+- **Courbe de charge d'un vrai client** (CSV, Linky) : les courbes Enedis donnent la forme moyenne d'un secteur, mais pas les pointes d'un site, qui décident de la rentabilité de la batterie.
 - Valider l'ajout de `import_surcharge_eur_mwh`, `export_price_eur_mwh`, `grid` (dont `penalty_eur_per_hour`), `strategy` (dont `peak_limit_kw`, `peak_reserve_kwh`, `anticipate_pv`) et des sources `odre_irradiance` / `rte_eco2mix` régional au format YAML.

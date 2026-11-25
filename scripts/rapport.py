@@ -888,8 +888,9 @@ def pro_summary(res_):
         "conso_mwh": eur(s_["conso_kwh"] / 1000), "pointe_kw": eur(res_.before["grid_kw"].max()),
         "pv_mwh": eur(s_["pv_kwh"] / 1000), "autoconso": eur(s_["taux_autoconso"]), "autoproduction": eur(s_["taux_autoproduction"]),
         "cycles": eur(s_["cycles_equivalents"]), "cout_avant": eur(res_.costs_before[0].total_eur), "cout_apres": eur(res_.costs_after[0].total_eur),
-        "penalite_avant": eur(res_.penalty_before["penalite_eur"]), "penalite_apres": eur(res_.penalty_after["penalite_eur"]),
-        "pointe_apres": eur(res_.penalty_after["pointe_kw"]),
+        "penalite_avant": eur(res_.penalty_before["penalite_eur"]) if res_.penalty_before else None,
+        "penalite_apres": eur(res_.penalty_after["penalite_eur"]) if res_.penalty_after else None,
+        "pointe_apres": eur(res_.after["grid_kw"].max()),
         "gain_pv": eur(gp), "gain_batterie": eur(gb), "bat_vie": eur(g_["batterie"]["vie_ans"]),
         "pv_retour": {l: (eur(c / (gp - c * economics.PV_OPEX_RATE)) if gp > c * economics.PV_OPEX_RATE else None) for l, c in pv_cap.items()},
         "bat_retour": {l: (eur(c / gb) if gb > 0 else None) for l, c in bat_cap.items()},
@@ -903,6 +904,49 @@ N["pro"] = {
                        for v, d_ in dd.items()} for k, dd in strategies_cmp.items()},
     "sensibilite_penalite": sens_pen,
 }
+
+# --- Courbes de charge réelles (open data Enedis) -----------------------------------------
+print("Courbes réelles Enedis")
+reel = {}
+clients_ = [("studio", "Studio", "studio_strasbourg"), ("pme", "PME de bureaux", "pme_strasbourg"),
+            ("hopital", "Hôpital", "hopital_strasbourg"), ("usine", "Usine", "usine_strasbourg")]
+for key, label, file_ in clients_:
+    bu_ = st_studio if key == "studio" else st_pme if key == "pme" else pro[key][1]
+    en_ = scenario.run(scenario.read(ROOT / "scenarios" / f"{file_}_enedis.yaml"))
+    reel[key] = (label, bu_, en_)
+    for p in scenario.make_plots(en_, FIG / f"reel_{key}", "2025-06-16"):
+        print("  ", key, p.name)
+
+f, axes = plt.subplots(2, 2, figsize=(13, 7))
+for ax_, (key, (label, bu_, en_)) in zip(axes.flat, reel.items()):
+    for res_, name_, color_ in [(bu_, "inventée (bottom-up)", C["grid"]), (en_, "réelle (Enedis, site moyen)", C["grid_after"])]:
+        l_ = res_.inputs["load_kw"].tz_convert(TZ)
+        wd = l_[l_.index.dayofweek < 5]
+        prof = wd.groupby(wd.index.hour + wd.index.minute / 60).mean()
+        ax_.plot(prof.index, prof.values, color=color_, lw=2, label=f"{name_} : {_n(standard.energy_kwh(res_.inputs['load_kw']) / 1000)} MWh/an")
+    ax_.set_title(label)
+    ax_.set_xticks(range(0, 25, 3))
+    ax_.set_xlabel("heure (jour ouvré moyen)")
+    ax_.set_ylabel("kW")
+    ax_.legend(fontsize=8)
+f.suptitle("Journée ouvrée moyenne : courbe inventée contre courbe réelle Enedis (même énergie annuelle)", fontweight="bold")
+f.tight_layout()
+fig("reel_comparaison_jour", f)
+
+f, axes = plt.subplots(2, 2, figsize=(13, 7))
+for ax_, (key, (label, bu_, en_)) in zip(axes.flat, reel.items()):
+    for res_, name_, color_ in [(bu_, "inventée", C["grid"]), (en_, "réelle (Enedis)", C["grid_after"])]:
+        l_ = res_.inputs["load_kw"].tz_convert(TZ).loc["2025-01-13":"2025-01-19"]
+        ax_.plot(l_.index, l_.values, color=color_, lw=1, label=f"{name_} (pointe de l'année {_n(res_.inputs['load_kw'].max())} kW)")
+    ax_.set_title(label)
+    ax_.set_ylabel("kW")
+    ax_.xaxis.set_major_formatter(plots.mdates.DateFormatter("%a %d"))
+    ax_.legend(fontsize=8)
+f.suptitle("Une semaine de janvier 2025 : la courbe réelle d'un site moyen est bien plus lisse", fontweight="bold")
+f.tight_layout()
+fig("reel_comparaison_semaine", f)
+
+N["reel"] = {key: {"bottom_up": pro_summary(bu_), "enedis": pro_summary(en_)} for key, (label, bu_, en_) in reel.items()}
 
 N["strasbourg"] = {
     "ghi_kwh_m2": eur(irr.sum() * standard.DT_H / 1000),

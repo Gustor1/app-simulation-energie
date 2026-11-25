@@ -32,8 +32,8 @@
 | Demande | État | Où |
 |---|---|---|
 | Calculer la rentabilité d'une batterie chez un client | ✅ | `economics.py` ; rapport § 7, § Strasbourg, § Hôpital et usine |
-| Courbes de charge usine / bureaux / hôpital / particulier | ✅ | 4 scénarios `*_strasbourg.yaml` ; 🟡 profils inventés (aucune vraie courbe disponible) |
-| Open source | ❓ | code sous licence MIT provisoire ; données uniquement ouvertes. Publier le code ? |
+| Courbes de charge usine / bureaux / hôpital / particulier | ✅ | 4 scénarios inventés `*_strasbourg.yaml` + 4 avec la vraie courbe Enedis du secteur `*_strasbourg_enedis.yaml` |
+| Open source | ✅ | vraies courbes de charge open data Enedis (adaptateur `enedis_open`, rapport § Courbes réelles) ; ❓ publier aussi le code (licence MIT provisoire) ? |
 | Bottom-up : somme d'appareils avec heures aléatoires | ✅ | `models/load_bottom_up.py`, testé |
 | Réfrigérateur 400 W, 7 min, 2×/h, ≈ 1 kWh/jour | 🟡 | les paramètres donnent 2,24 kWh/jour : choix 1×/h (1,12 kWh/jour) pour Strasbourg |
 | TV, lave-vaisselle, lave-linge, éclairage | ✅ | valeurs exactes du point, testées (studio ≈ 10 kWh/jour) |
@@ -55,7 +55,7 @@
 ### Slide 7 – But du projet
 | Demande | État | Où |
 |---|---|---|
-| Simuler énergie et coûts : client + PV + batterie, achat/vente au prix du marché | ✅ | package `simu`, 8 scénarios, 58 tests |
+| Simuler énergie et coûts : client + PV + batterie, achat/vente au prix du marché | ✅ | package `simu`, 12 scénarios, 60 tests |
 | Fichiers des tâches 1 à 7 | ✅ | dossier `taches/` (voir ci-dessous) |
 
 ## Liste des tâches
@@ -65,14 +65,14 @@
 | 2. Prix unitaires batteries 10 kWh / 100 kWh / 1 MWh et PV 10 kW / 100 kW / 1 MW | 🟡 | tâche 2 ; utilisés dans `economics.py`. **La fiche ne cite aucune source** |
 | 3. Zoom sur le spread dans le cahier des charges + articles sur l'intérêt du couplage chez les gros clients | ✅ | tâche 3 (articles) ; spread recalculé sur 2025 et zoom ajouté dans la tâche 7 |
 | 4. Sources pour modéliser la courbe de charge des batteries | ✅ | tâche 5 ; modèle programmé et testé |
-| 5. Sources pour simuler la courbe de charge client | ✅ | tâche 6 ; bottom-up programmé ; 🟡 l'API open data d'Enedis ne répond plus |
+| 5. Sources pour simuler la courbe de charge client | ✅ | tâche 6 ; bottom-up **et** open data Enedis programmés |
 | 6. Cahier des charges simulation usage, solaire, batterie | ✅ | tâche 7, version 3 |
 | 7. Chapitre puissance et énergie | ✅ | tâche 4 |
 
 ## Ce qui reste ouvert (à présenter comme tel)
 1. **Valeurs choisies à valider** : frais de réseau et taxes (estimation), k du chauffage, frigo, revente du surplus pro (rapport, « Mes choix »).
 2. **Formule de pénalité HTA** pour l'hôpital et l'usine.
-3. **Vraies courbes de charge** d'un client.
+3. **Courbe de charge d'un vrai client** : les courbes Enedis sont des moyennes de secteur, sans les pointes d'un site.
 4. **Sources de la fiche prix** (tâche 2).
 5. **Open source** : publier le code ou non.
 6. Suite possible : optimisation du pilotage de la batterie (au lieu de règles simples).

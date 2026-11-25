@@ -34,7 +34,7 @@ import pandas as pd
 import yaml
 
 from simu import economics, simulate, standard
-from simu.adapters import csv_generic, energy_charts, odre_meteo, rte_eco2mix
+from simu.adapters import csv_generic, enedis_open, energy_charts, odre_meteo, rte_eco2mix
 from simu.models import load_bottom_up, market, pv
 from simu.models.battery import Battery
 from simu.strategies import rules
@@ -76,7 +76,11 @@ def load_site(config: dict) -> pd.DataFrame:
     if adapter == "csv_generic":
         df = csv_generic.load(_path(config, site["load"]), _path(config, site["mapping"]))
         return df[["load_kw"]]
-    raise ValueError(f"adaptateur de site inconnu : {adapter!r} (disponibles : bottom_up, csv_generic)")
+    if adapter == "enedis_open":
+        # courbe réelle d'un site moyen du segment (open data Enedis), mise à l'échelle de annual_kwh
+        opts = {k: site[k] for k in ("dataset", "region", "sector", "power_range", "profile", "annual_kwh") if k in site}
+        return enedis_open.load_profile(start, end, tz=tz, **opts)
+    raise ValueError(f"adaptateur de site inconnu : {adapter!r} (disponibles : bottom_up, csv_generic, enedis_open)")
 
 
 def _resolve_temperatures(appliance, start, end):
