@@ -1221,9 +1221,184 @@ Enedis publie gratuitement, au pas de 30 min, la consommation réelle de **segme
   une consommation de nuit, comme la courbe Enedis. **Seule la vraie courbe d'un client** (son compteur, ou un CSV via
   l'adaptateur générique) permet de trancher pour la batterie.
 
-**Les 7 graphiques du PowerPoint** existent aussi pour chaque client avec la vraie courbe. Ils se lisent comme ceux
-plus haut : [studio](fig/reel_studio/), [PME](fig/reel_pme/), [hôpital](fig/reel_hopital/), [usine](fig/reel_usine/).
-On les obtient avec `python -m simu run scenarios/usine_strasbourg_enedis.yaml --out results/usine_reel`.
+On les obtient avec `python -m simu run scenarios/usine_strasbourg_enedis.yaml --out results/usine_reel`
+(idem pour les autres clients).
+
+### Les 7 graphiques du PowerPoint – studio, courbe réelle Enedis
+
+#### 1. Utilisation du solaire
+
+![](fig/reel_studio/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 3 kWc de panneaux du studio : consommés directement (orange), stockés dans la batterie (vert foncé) ou revendus (vert clair).
+
+#### 2. Utilisation de la batterie
+
+![](fig/reel_studio/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin pour la batterie de 5 kWh : en haut son niveau de charge ; en bas ses charges (jaune = soleil, bleu = réseau) et ses décharges (rouge), avec le prix du marché (violet).
+
+#### 3. Courbe de charge brute
+
+![](fig/reel_studio/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** La vraie consommation du studio, sans équipement : une semaine de juin à gauche et la journée moyenne de l'année à droite (avec la plage où se trouvent 80 % des jours).
+
+#### 4. Ce qu'on achète au réseau
+
+![](fig/reel_studio/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** La puissance achetée au réseau pendant une semaine de juin, sans équipement (rouge) et avec panneaux + batterie (bleu) ; sous zéro (vert), le studio revend. Le pointillé, s'il y en a un, est la puissance prévue au contrat. Les pics bleus soudains sont la batterie qui se recharge au réseau aux heures bon marché, sans dépasser cette puissance.
+
+#### 5. Coût de l'énergie
+
+![](fig/reel_studio/5_cout_energie.png)
+
+> 📊 **Comment lire :** La facture mois par mois, sans (rouge) et avec équipement (bleu), acheminement et taxes compris. Le titre donne l'économie sur l'année.
+
+#### 6. Coût de la batterie
+
+![](fig/reel_studio/6_cout_batterie.png)
+
+> 📊 **Comment lire :** À gauche, le prix de la batterie de 5 kWh selon trois devis ; à droite, l'argent cumulé au fil des ans (prix payé, puis gain annuel ajouté). Si une ligne repasse au-dessus de zéro avant la fin, la batterie est remboursée ; le tableau ci-dessus donne les années.
+
+#### 7. Coût des panneaux
+
+![](fig/reel_studio/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 3 kWc de panneaux, sur 25 ans de vie.
+
+### Les 7 graphiques du PowerPoint – PME de bureaux, courbe réelle Enedis
+
+#### 1. Utilisation du solaire
+
+![](fig/reel_pme/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 100 kWc de panneaux de la PME de bureaux : consommés directement (orange), stockés dans la batterie (vert foncé) ou revendus (vert clair).
+
+#### 2. Utilisation de la batterie
+
+![](fig/reel_pme/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin pour la batterie de 100 kWh : en haut son niveau de charge ; en bas ses charges (jaune = soleil, bleu = réseau) et ses décharges (rouge), avec le prix du marché (violet).
+
+#### 3. Courbe de charge brute
+
+![](fig/reel_pme/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** La vraie consommation de la PME de bureaux, sans équipement : une semaine de juin à gauche et la journée moyenne de l'année à droite (avec la plage où se trouvent 80 % des jours).
+
+#### 4. Ce qu'on achète au réseau
+
+![](fig/reel_pme/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** La puissance achetée au réseau pendant une semaine de juin, sans équipement (rouge) et avec panneaux + batterie (bleu) ; sous zéro (vert), la PME revend. Le pointillé, s'il y en a un, est la puissance prévue au contrat. Les pics bleus soudains sont la batterie qui se recharge au réseau aux heures bon marché, sans dépasser cette puissance.
+
+#### 5. Coût de l'énergie
+
+![](fig/reel_pme/5_cout_energie.png)
+
+> 📊 **Comment lire :** La facture mois par mois, sans (rouge) et avec équipement (bleu), acheminement et taxes compris. Le titre donne l'économie sur l'année.
+
+#### 6. Coût de la batterie
+
+![](fig/reel_pme/6_cout_batterie.png)
+
+> 📊 **Comment lire :** À gauche, le prix de la batterie de 100 kWh selon trois devis ; à droite, l'argent cumulé au fil des ans (prix payé, puis gain annuel ajouté). Si une ligne repasse au-dessus de zéro avant la fin, la batterie est remboursée ; le tableau ci-dessus donne les années.
+
+#### 7. Coût des panneaux
+
+![](fig/reel_pme/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 100 kWc de panneaux, sur 25 ans de vie.
+
+### Les 7 graphiques du PowerPoint – hôpital, courbe réelle Enedis
+
+#### 1. Utilisation du solaire
+
+![](fig/reel_hopital/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 250 kWc de panneaux de l'hôpital : consommés directement (orange), stockés dans la batterie (vert foncé) ou revendus (vert clair).
+
+#### 2. Utilisation de la batterie
+
+![](fig/reel_hopital/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin pour la batterie de 250 kWh : en haut son niveau de charge ; en bas ses charges (jaune = soleil, bleu = réseau) et ses décharges (rouge), avec le prix du marché (violet).
+
+#### 3. Courbe de charge brute
+
+![](fig/reel_hopital/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** La vraie consommation de l'hôpital, sans équipement : une semaine de juin à gauche et la journée moyenne de l'année à droite (avec la plage où se trouvent 80 % des jours).
+
+#### 4. Ce qu'on achète au réseau
+
+![](fig/reel_hopital/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** La puissance achetée au réseau pendant une semaine de juin, sans équipement (rouge) et avec panneaux + batterie (bleu) ; sous zéro (vert), l'hôpital revend. Le pointillé, s'il y en a un, est la puissance prévue au contrat. Les pics bleus soudains sont la batterie qui se recharge au réseau aux heures bon marché, sans dépasser cette puissance.
+
+#### 5. Coût de l'énergie
+
+![](fig/reel_hopital/5_cout_energie.png)
+
+> 📊 **Comment lire :** La facture mois par mois, sans (rouge) et avec équipement (bleu), acheminement et taxes compris. Le titre donne l'économie sur l'année.
+
+#### 6. Coût de la batterie
+
+![](fig/reel_hopital/6_cout_batterie.png)
+
+> 📊 **Comment lire :** À gauche, le prix de la batterie de 250 kWh selon trois devis ; à droite, l'argent cumulé au fil des ans (prix payé, puis gain annuel ajouté). Si une ligne repasse au-dessus de zéro avant la fin, la batterie est remboursée ; le tableau ci-dessus donne les années.
+
+#### 7. Coût des panneaux
+
+![](fig/reel_hopital/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 250 kWc de panneaux, sur 25 ans de vie.
+
+### Les 7 graphiques du PowerPoint – usine, courbe réelle Enedis
+
+#### 1. Utilisation du solaire
+
+![](fig/reel_usine/1_utilisation_solaire.png)
+
+> 📊 **Comment lire :** Ce que deviennent chaque mois les kWh produits par les 500 kWc de panneaux de l'usine : consommés directement (orange), stockés dans la batterie (vert foncé) ou revendus (vert clair).
+
+#### 2. Utilisation de la batterie
+
+![](fig/reel_usine/2_utilisation_batterie.png)
+
+> 📊 **Comment lire :** Une semaine de juin pour la batterie de 1 MWh : en haut son niveau de charge ; en bas ses charges (jaune = soleil, bleu = réseau) et ses décharges (rouge), avec le prix du marché (violet).
+
+#### 3. Courbe de charge brute
+
+![](fig/reel_usine/3_courbe_de_charge_brute.png)
+
+> 📊 **Comment lire :** La vraie consommation de l'usine, sans équipement : une semaine de juin à gauche et la journée moyenne de l'année à droite (avec la plage où se trouvent 80 % des jours).
+
+#### 4. Ce qu'on achète au réseau
+
+![](fig/reel_usine/4_courbe_achetee.png)
+
+> 📊 **Comment lire :** La puissance achetée au réseau pendant une semaine de juin, sans équipement (rouge) et avec panneaux + batterie (bleu) ; sous zéro (vert), l'usine revend. Le pointillé, s'il y en a un, est la puissance prévue au contrat. Les pics bleus soudains sont la batterie qui se recharge au réseau aux heures bon marché, sans dépasser cette puissance.
+
+#### 5. Coût de l'énergie
+
+![](fig/reel_usine/5_cout_energie.png)
+
+> 📊 **Comment lire :** La facture mois par mois, sans (rouge) et avec équipement (bleu), acheminement et taxes compris. Le titre donne l'économie sur l'année.
+
+#### 6. Coût de la batterie
+
+![](fig/reel_usine/6_cout_batterie.png)
+
+> 📊 **Comment lire :** À gauche, le prix de la batterie de 1 MWh selon trois devis ; à droite, l'argent cumulé au fil des ans (prix payé, puis gain annuel ajouté). Si une ligne repasse au-dessus de zéro avant la fin, la batterie est remboursée ; le tableau ci-dessus donne les années.
+
+#### 7. Coût des panneaux
+
+![](fig/reel_usine/7_cout_panneaux.png)
+
+> 📊 **Comment lire :** Même lecture pour les 500 kWc de panneaux, sur 25 ans de vie.
 
 ---
 
