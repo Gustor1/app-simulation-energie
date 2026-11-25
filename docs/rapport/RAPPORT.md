@@ -26,8 +26,17 @@ incomplète, **j'en ai choisi une pour chacune**, d'après une source publique q
 | **Pénalité de dépassement** | **12,41 € par heure** passée au-dessus de la puissance souscrite | C'est la règle réelle (CMDPS) des clients « C4 » (36 à 250 kVA) : on paie selon la **durée** du dépassement. Elle remplace mes 10 €/kW/mois, qui étaient inventés. L'hôpital et l'usine dépassent 250 kVA et relèvent en réalité d'une autre formule ; j'applique la même par simplicité. |
 | **Courbes de consommation** | profils inventés, appareil par appareil | Aucune vraie courbe par secteur n'est disponible en open data (l'ancienne API d'Enedis ne répond plus). |
 
-⚠️ **À vérifier :** les 12,41 €/h et les ≈ 45 €/MWh d'acheminement viennent de comparateurs et d'ordres de
-grandeur, pas de la grille officielle Enedis / CRE. Sources consultées : [Selectra, dépassement de puissance](https://entreprises.selectra.info/energie/electricite/compteurs/puissance/depassement),
+**Fiabilité de ces valeurs :**
+- **Pénalité : vérifiée** dans la [grille officielle Enedis TURPE 7](https://www.enedis.fr/sites/default/files/documents/pdf/brochure-tarifaire-turpe-7.pdf).
+  Elle donne « CMDPS = 12,79 × h » (h = heures de dépassement) au 01/08/2026. Les 12,41 €/h sont la valeur de l'année
+  précédente (12,79 ÷ 1,0304, hausse d'août 2026), qui correspond à 2025, l'année simulée. Pour la HTA, la grille donne une autre
+  formule, 0,04 × b × √(Σ dépassements² par pas de 10 min), **non modélisée**.
+- **Revente à 1,1 c€/kWh : plusieurs sites concordent**, mais je n'ai pas lu l'arrêté lui-même.
+- **Accise ≈ 31 €/MWh : sources contradictoires** (30,85 selon EDF, 25,19 hors majoration selon le BOFiP).
+- **Acheminement ≈ 45 €/MWh (particulier) et 50 €/MWh au total (pro) : estimations de ma part, sans source.**
+  Les coefficients officiels sont dans des tableaux-images de la grille Enedis que je n'ai pas pu lire. À remplacer par la valeur d'une vraie facture.
+
+Autres sources consultées : [Selectra, dépassement de puissance](https://entreprises.selectra.info/energie/electricite/compteurs/puissance/depassement),
 [EDF, taxes sur l'électricité](https://www.edf.fr/entreprises/faq-entreprises/facture/les-taxes-evolutions-tarifaires-en-electricite/quelles-sont-les-taxes-applicables-sur-l-electricite),
 [tarif de rachat EDF OA 2026](https://www.les-energies-renouvelables.eu/conseils/photovoltaique/tarif-rachat-electricite-photovoltaique/).
 
@@ -1170,7 +1179,7 @@ Il faut maintenant **confirmer la grille tarifaire réelle**, en particulier la 
 
 ## Choix à faire valider (voir « Mes choix » en tête du rapport)
 
-- **Pénalités :** valider la règle C4 (12,41 €/h) et obtenir la **formule HTA** pour l'hôpital et l'usine. **C'est la donnée qui décide de la rentabilité des batteries** chez les clients à fortes pointes.
+- **Pénalités :** règle C4 confirmée par la grille Enedis (12,41 €/h en 2025, 12,79 €/h depuis août 2026). Reste à modéliser la **formule HTA** pour l'hôpital et l'usine. **C'est la donnée qui décide de la rentabilité des batteries** chez les clients à fortes pointes.
 - **Acheminement et taxes :** confirmer 75 €/MWh (particulier) et 50 €/MWh (pro) avec la grille officielle.
 - **Revente du surplus :** 11 €/MWh pour le particulier (EDF OA), spot pour le pro.
 - **Frigo** à 1 fois par heure et **chauffage** k = 0,5 : à confirmer.
