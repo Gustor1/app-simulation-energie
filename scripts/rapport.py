@@ -845,8 +845,8 @@ fig("pro_usine_monotone", plots.duration_curve({
 fig("pro_usine_batterie_semaine", plots.battery_use(usine_res.after, "2025-02-03", 7,
                                                     "Usine, février : batterie en arbitrage + écrêtage des pointes"))
 
-# sensibilité au montant de la pénalité (inventé) : retour de la batterie (prix médian)
-pen_levels = [0, 5, 10, 15, 20, 30]
+# sensibilité au montant de la pénalité (€ par heure de dépassement) : retour de la batterie (prix médian)
+pen_levels = [0, 5, 12.41, 25, 50, 100]
 sens_pen = {}
 f, ax = plt.subplots(figsize=(10, 4))
 for (key, file_), color in zip([("PME", "pme_strasbourg"), ("Hôpital", "hopital_strasbourg"), ("Usine", "usine_strasbourg")],
@@ -856,20 +856,22 @@ for (key, file_), color in zip([("PME", "pme_strasbourg"), ("Hôpital", "hopital
     spot_ = r_.inputs["spot_eur_mwh"]
     mid = simulate.run(r_.inputs["load_kw"], r_.after["pv_kw"], None, None, spot_)  # PV seul
     sub_ = cfg_["grid"]["subscribed_kw"]
-    e_gain = market.cost_spot(mid["grid_kw"], spot_).total_eur - market.cost_spot(r_.after["grid_kw"], spot_).total_eur
+    offer_ = cfg_["market"]["offers"][0]
+    e_gain = market.cost(mid["grid_kw"], spot_, offer_).total_eur - market.cost(r_.after["grid_kw"], spot_, offer_).total_eur
     cyc = r_.summary_after["cycles_equivalents"]
     capex_m = economics.capex(battery_kwh=r_.battery.capacity_kwh)["batterie_eur"]
     life_ = economics.battery_life_years(cyc, r_.battery.cycle_life)
     rows_ = []
     for pen in pen_levels:
-        p_gain = (market.overrun_penalty(mid["grid_kw"], sub_, pen)["penalite_eur"]
-                  - market.overrun_penalty(r_.after["grid_kw"], sub_, pen)["penalite_eur"])
+        p_gain = (market.overrun_penalty(mid["grid_kw"], sub_, eur_per_hour=pen)["penalite_eur"]
+                  - market.overrun_penalty(r_.after["grid_kw"], sub_, eur_per_hour=pen)["penalite_eur"])
         g_ = e_gain + p_gain
-        rows_.append({"penalite_eur_kw_mois": pen, "gain": round(g_, 0), "retour_median": round(capex_m / g_, 1) if g_ > 0 else None})
+        rows_.append({"penalite_eur_h": pen, "gain": round(g_, 0), "retour_median": round(capex_m / g_, 1) if g_ > 0 else None})
     sens_pen[key] = {"vie": round(life_, 1), "capex_median": capex_m, "lignes": rows_}
     ax.plot(pen_levels, [min(r["retour_median"] or 99, 60) for r in rows_], marker="o", color=color, label=key)
 ax.axhline(15, color="black", ls=":", lw=1, label="durée de vie ≈ 15 ans")
-ax.set_xlabel("pénalité de dépassement (€ par kW dépassé et par mois)")
+ax.axvline(12.41, color="grey", ls="--", lw=0.8, label="CMDPS C4 ≈ 12,41 €/h (valeur retenue)")
+ax.set_xlabel("pénalité de dépassement (€ par heure passée au-dessus de la puissance souscrite)")
 ax.set_ylabel("retour de la batterie, prix médian (ans)")
 ax.set_title("La rentabilité de la batterie dépend surtout du montant des pénalités")
 ax.legend()

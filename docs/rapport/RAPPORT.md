@@ -1,10 +1,45 @@
 # Rapport de tests – Simulateur énergie (étapes 0 à 8, simulation Strasbourg : particulier, bureaux, hôpital, usine)
 
-*24/11/2026 – branche `etapes-0-2`. Données réelles : prix spot et production PV France 2025
-(Energy-Charts, RTE éCO2mix). Clients **fictifs** : un studio et une PME de bureaux (bottom-up).*
+*25/11/2026 – branche `etapes-0-2`. Données réelles 2025 : prix spot (Energy-Charts), production PV et météo
+(RTE éCO2mix, RTE/ODRÉ). Clients **fictifs** (bottom-up) : studio, PME de bureaux, hôpital, usine.*
 
 Régénérer les graphiques et les chiffres : `python scripts/rapport.py` (≈ 25 s, données en cache).
 Chiffres bruts : [chiffres.json](chiffres.json).
+
+---
+
+## Mes choix (valeurs qui manquaient)
+
+Plusieurs valeurs n'étaient données ni par le plan ni par le PowerPoint. Plutôt que de laisser la simulation
+incomplète, **j'en ai choisi une pour chacune**, d'après une source publique quand il y en a une.
+- **Où ils s'appliquent :** dans la **simulation de Strasbourg** (studio, PME, hôpital, usine). Les étapes 1 à 8
+  gardent les paramètres du plan, car elles servent à vérifier les formules.
+- **Comment les changer :** chaque valeur tient en une ligne du fichier de scénario (`scenarios/*_strasbourg.yaml`).
+
+| Sujet | Mon choix | Pourquoi, en simple |
+|---|---|---|
+| **Frigo** | 400 W, 7 min, **1 fois par heure** → 1,12 kWh/jour | Le plan annonce « ≈ 1 kWh/jour », mais ses paramètres (2 fois par heure) donnent 2,24 kWh/jour, le double d'un frigo courant. J'ai gardé le résultat annoncé, plus réaliste, et ajusté le nombre de cycles. |
+| **Chauffage du studio** | k = 0,5 kWh par °C et par jour → 1 450 kWh/an | Le PowerPoint donne la formule mais pas k. Avec 0,5, le chauffage fait environ 30 % de la consommation du studio, un ordre de grandeur plausible pour un petit logement bien isolé. |
+| **Acheminement et taxes, particulier** | **+ 75 €/MWh** sur chaque kWh acheté (hors TVA) | Une facture ne contient pas que l'énergie : on paie aussi le transport sur le réseau (TURPE, ≈ 45 €/MWh) et une taxe, l'accise (≈ 31 €/MWh en 2026). Chaque kWh produit soi-même évite ces frais. Les ignorer sous-estimait le gain des panneaux et de la batterie. |
+| **Acheminement et taxes, professionnel** | **+ 50 €/MWh** | Mêmes postes, mais moins chers par kWh pour un professionnel. C'est un ordre de grandeur. |
+| **Revente du surplus** | particulier : **11 €/MWh** (1,1 c€/kWh) ; professionnel : **prix spot** | Particulier (≤ 9 kWc) : tarif d'obligation d'achat EDF OA depuis juin 2026. Professionnel : surplus vendu au marché par un intermédiaire (agrégateur). |
+| **Pénalité de dépassement** | **12,41 € par heure** passée au-dessus de la puissance souscrite | C'est la règle réelle (CMDPS) des clients « C4 » (36 à 250 kVA) : on paie selon la **durée** du dépassement. Elle remplace mes 10 €/kW/mois, qui étaient inventés. L'hôpital et l'usine dépassent 250 kVA et relèvent en réalité d'une autre formule ; j'applique la même par simplicité. |
+| **Courbes de consommation** | profils inventés, appareil par appareil | Aucune vraie courbe par secteur n'est disponible en open data (l'ancienne API d'Enedis ne répond plus). |
+
+⚠️ **À vérifier :** les 12,41 €/h et les ≈ 45 €/MWh d'acheminement viennent de comparateurs et d'ordres de
+grandeur, pas de la grille officielle Enedis / CRE. Sources consultées : [Selectra, dépassement de puissance](https://entreprises.selectra.info/energie/electricite/compteurs/puissance/depassement),
+[EDF, taxes sur l'électricité](https://www.edf.fr/entreprises/faq-entreprises/facture/les-taxes-evolutions-tarifaires-en-electricite/quelles-sont-les-taxes-applicables-sur-l-electricite),
+[tarif de rachat EDF OA 2026](https://www.les-energies-renouvelables.eu/conseils/photovoltaique/tarif-rachat-electricite-photovoltaique/).
+
+**Ce que ces choix changent :**
+- **Les panneaux deviennent rentables chez les professionnels**, car ils évitent aussi l'acheminement et les taxes :
+  - hôpital : 5 à 17 ans de retour ;
+  - usine : 9 à 16 ans ;
+  - PME : 7 à 27 ans, pour 25 ans de durée de vie.
+- **La batterie de l'usine devient moins rentable** : 13 à 21 ans de retour au lieu de 9 à 15, pour 15 ans de durée de vie. La vraie règle de
+  pénalité coûte moins cher que ma règle inventée pour ses pointes courtes.
+- La batterie de l'hôpital est rentable au prix d'achat bas et tout juste au prix médian.
+- **Rien n'est rentable chez le particulier**, même avec acheminement et taxes.
 
 ---
 
@@ -12,20 +47,21 @@ Chiffres bruts : [chiffres.json](chiffres.json).
 
 | Question | Réponse sur 2025 (clients fictifs) |
 |---|---|
-| Les tests passent-ils ? | **49 / 49** (dont 3 qui interrogent les vraies API) |
+| Les tests passent-ils ? | **58 / 58** (dont 3 qui interrogent les vraies API) |
 | Le spread 80–180 €/MWh du plan est-il confirmé ? | **Oui en grande partie** : médiane 92 €/MWh, 64 % des jours entre 80 et 180 ; mais 35 % des jours sont **sous** 80 |
 | Une batterie est-elle rentable **sur l'énergie seule (spot)** ? | **Non** dans nos cas : temps de retour 16 à 30 ans pour une durée de vie d'environ 15 ans |
-| Qu'est-ce qui peut la rendre rentable ? | **Les pénalités de dépassement** (peak shaving) et **les coûts évités sur chaque kWh acheté** (acheminement + taxes, non modélisés par défaut). Ce sont eux qui décident, pas le spread |
+| Qu'est-ce qui peut la rendre rentable ? | **Les pénalités de dépassement** (peak shaving) et **les coûts évités sur chaque kWh acheté** (acheminement + taxes, comptés dans la simulation de Strasbourg). Ce sont eux qui décident, pas le spread |
 | La simulation du PowerPoint (Strasbourg, météo réelle) ? | **Faite** : PV d'après le rayonnement réel du Grand Est (1 076 kWh/kWc modélisés contre 1 068 mesurés par RTE), chauffage d'après la température réelle. Mêmes conclusions de rentabilité (voir § Strasbourg) |
-| Et chez un client à fortes pointes (usine, hôpital) ? | **Oui sous condition** : en cumulant arbitrage + écrêtage des pointes, la batterie de 1 MWh de l'usine se rembourse en 9 à 15 ans (vie ≈ 15 ans), mais **uniquement grâce aux pénalités de dépassement, dont le montant est inventé** (sans pénalité : 25 ans) |
-| Le PV est-il rentable ? | Pour la PME : oui avec un prix d'achat bas (12 ans) ; non au prix médian (28 ans) si on ne compte que le spot. Rentable dès qu'on compte ~50 €/MWh de coûts évités (retour 18 ans), nettement à 100 €/MWh (10,5 ans) |
+| Et chez un client à fortes pointes (usine, hôpital) ? | **Seulement au prix d'achat bas** avec mes choix (pénalité réelle C4 de 12,41 €/h, + 50 €/MWh d'acheminement et taxes). La batterie de l'hôpital met 11 / 15 / 19 ans à se rembourser, celle de l'usine 13 / 17 / 21 ans, pour ≈ 15 ans de vie. **Le résultat dépend fortement du montant de la pénalité** (§ Hôpital et usine) |
+| Le PV est-il rentable ? | **Oui chez les professionnels** dès qu'on compte acheminement et taxes. À Strasbourg, au prix d'achat médian : hôpital 10 ans, usine 13 ans, PME 16 ans, pour 25 ans de vie. **Non pour le studio** (32 ans au mieux) |
 
-⚠️ **Lecture importante :** le coût d'achat simulé est **uniquement le prix de l'énergie** (spot,
-fixe ou bloc + spot), comme dans la fiche bloc + spot. Une vraie facture contient aussi
-l'**acheminement (TURPE)** et des **taxes**, payés sur chaque kWh soutiré et donc évités par
-l'autoconsommation. Sans eux, les gains du PV et de la batterie sont **sous-estimés**. J'ai
-ajouté un paramètre (`import_surcharge_eur_mwh`, 0 par défaut) et une analyse de sensibilité
-(§ 7), mais **je n'ai pas fixé de valeur** : elle dépend du contrat du client.
+⚠️ **Lecture importante :**
+- **Étapes 1 à 8 :** le coût d'achat simulé est **uniquement le prix de l'énergie** (spot, fixe ou bloc + spot),
+  comme dans la fiche bloc + spot.
+- **Ce qui manque :** une vraie facture contient aussi l'**acheminement (TURPE)** et des **taxes**, payés sur
+  chaque kWh soutiré et donc évités par l'autoconsommation. Sans eux, les gains sont **sous-estimés**.
+- **Simulation de Strasbourg :** ils sont comptés, avec les valeurs de « Mes choix » (paramètre
+  `import_surcharge_eur_mwh`). La sensibilité à ce montant est au § 7.
 
 ---
 
@@ -501,6 +537,8 @@ charge de midi coïncide avec le creux solaire : stocker l'énergie solaire, c'e
   des pointes courtes, idéales pour une batterie.
 - ⚠️ **La pénalité de 10 €/kW/mois est inventée** et la règle de calcul (dépassement maximal du mois) est
   simplifiée. Comme le gain du peak shaving en dépend entièrement, il faut une vraie grille tarifaire avant de conclure.
+  Dans la simulation de Strasbourg, je l'ai remplacée par la règle réelle du tarif C4, 12,41 € par heure de
+  dépassement (voir « Mes choix »).
 
 ---
 
@@ -714,9 +752,10 @@ surface = kWc ÷ Pmax 250 W/m² (100 kWc = 400 m²), plafonné à 250 W/m². Ray
 | Σ (20 − T) sur ces jours | 2 900 °C·jour |
 | Chauffage du studio avec k = 0,5 kWh/°C/jour | **1 450 kWh/an** |
 
-⚠️ **k = 0,5 est inventé** (le PowerPoint ne donne pas de valeur). Avec le chauffage, le studio consomme
-**5 224 kWh/an (14,3 kWh/jour)**, au-dessus des 4 300 kWh/an du PowerPoint. Soit le chauffage du studio de
-référence n'est pas électrique, soit les autres appareils sont surestimés (frigo à 2,24 kWh/jour, machines tous les jours).
+**k = 0,5 est mon choix** (voir « Mes choix ») : le PowerPoint ne donne pas de valeur.
+- **Consommation du studio :** avec le chauffage et le frigo à 1,12 kWh/jour, il consomme **4 816 kWh/an (13,2 kWh/jour)**,
+  un peu au-dessus des 4 300 kWh/an du PowerPoint.
+- **D'où vient l'écart :** les machines tournent tous les jours dans le modèle, ce qui est sans doute trop.
 
 ![Studio janvier conso](fig/st_studio_conso_hiver.png)
 
@@ -726,26 +765,29 @@ référence n'est pas électrique, soit les autres appareils sont surestimés (f
 
 ### Résultats
 
+Avec les valeurs de « Mes choix » : spot + 75 €/MWh (studio) ou + 50 €/MWh (PME) sur chaque kWh acheté,
+surplus du studio racheté 11 €/MWh, pénalité de 12,41 € par heure de dépassement pour la PME.
+
 | 2025, Strasbourg | Studio (3 kWc + 5 kWh) | PME de bureaux (100 kWc + 100 kWh) |
 |---|---|---|
-| Consommation | 5 224 kWh (dont 1 450 de chauffage) | 287 739 kWh |
+| Consommation | 4 816 kWh (dont 1 450 de chauffage) | 287 739 kWh |
 | Production PV | 3 229 kWh | 107 621 kWh |
-| Autoconsommation / autoproduction | 72 % / 42 % | 90 % / 33 % |
-| Cycles de batterie par an | 360 | 340 |
-| Coût de l'énergie au spot, sans → avec équipement | 379 € → 200 € | 16 860 € → 11 578 € |
-| Pénalités de dépassement, sans → avec | – | 2 640 € → 674 € |
-| Gain annuel dû au PV | 87 € | 5 503 € (dont pénalités évitées) |
-| Gain annuel dû à la batterie (en plus du PV) | 92 € | 1 744 € |
-| Retour du PV, prix bas / médian / haut (durée de vie 25 ans) | 139 ans / 509 ans / jamais | **13** / 32 / 64 ans |
-| Retour de la batterie, prix bas / médian / haut (durée de vie ≈ 14 ans) | 33 / 52 / 71 ans | 17 / 24 / 32 ans |
+| Autoconsommation / autoproduction | 70 % / 44 % | 90 % / 33 % |
+| Cycles de batterie par an | 360 | 339 |
+| Coût de l'énergie + acheminement et taxes, sans → avec équipement | 712 € → 380 € | 31 247 € → 21 245 € |
+| Pénalités de dépassement, sans → avec | – | 1 834 € → 580 € |
+| Gain annuel dû au PV | 181 € | 9 381 € (dont pénalités évitées) |
+| Gain annuel dû à la batterie (en plus du PV) | 151 € | 1 875 € |
+| Retour du PV, prix bas / médian / haut (durée de vie 25 ans) | 32 / 49 / 73 ans | **7 / 16** / 27 ans |
+| Retour de la batterie, prix bas / médian / haut (durée de vie ≈ 14 ans) | 20 / 31 / 43 ans | 16 / 23 / 29 ans |
 
 **Interprétation.**
-- **Les conclusions sont les mêmes qu'avec le profil national** : en 2025, Strasbourg a produit autant
-  par kWc que la moyenne française. Si l'on ne compte que le prix de l'énergie au spot, **le PV de la PME est
-  rentable seulement au prix bas** (13 ans) et **la batterie ne l'est dans aucun cas**.
-- **Pour le studio, rien n'est rentable au prix spot** : l'électricité y coûte en moyenne ~72 €/MWh, et un
-  particulier paie en réalité bien plus (acheminement + taxes). C'est exactement la limite expliquée en § 7 : avec
-  ces coûts, la sensibilité montre un retour d'environ 14 ans pour la batterie du studio à 200 €/MWh de surcoût évité.
+- **Le PV de la PME devient rentable** au prix d'achat bas (7 ans) et médian (16 ans) : chaque kWh autoconsommé évite
+  le spot **et** les 50 €/MWh d'acheminement et taxes. Au spot seul, il fallait 13 ans au prix bas et 32 au prix médian.
+- **La batterie de la PME ne l'est toujours pas** (16 ans au mieux pour ≈ 15 ans de vie) : elle ne fait que
+  déplacer des kWh, et ne gagne donc l'acheminement et les taxes que sur l'énergie solaire stockée.
+- **Pour le studio, rien n'est rentable**, même avec 75 €/MWh d'acheminement et taxes évités. Les 3 kWc sont chers par kWc
+  (prix de la classe 10 kWc), et l'été une grande partie du soleil est revendue 1,1 c€/kWh seulement.
 - Le chauffage d'hiver rend la batterie utile **même sans soleil** : elle se charge la nuit, quand le prix est plus bas, et
   restitue au pic du soir (graphique ci-dessous).
 
@@ -796,9 +838,8 @@ référence n'est pas électrique, soit les autres appareils sont surestimés (f
 ![](fig/st_studio/5_cout_energie.png)
 
 > 📊 **Comment lire :** La facture d'énergie du studio mois par mois, sans (rouge) et avec équipement (bleu).
-> L'hiver coûte le plus cher à cause du chauffage et des prix élevés. Seul le prix de l'énergie est compté,
-> sans acheminement ni taxes. Dans ce graphique, le surplus revendu est compté au prix du marché ; dans le
-> tableau ci-dessus, au tarif de rachat de 1,1 c€/kWh, d'où un léger écart.
+> L'hiver coûte le plus cher à cause du chauffage et des prix élevés. Chaque kWh acheté est compté au prix du
+> marché plus 75 €/MWh d'acheminement et taxes ; le surplus est revendu 1,1 c€/kWh. Le titre donne l'économie sur l'année.
 
 #### 6. Coût de la batterie
 
@@ -812,8 +853,8 @@ référence n'est pas électrique, soit les autres appareils sont surestimés (f
 
 ![](fig/st_studio/7_cout_panneaux.png)
 
-> 📊 **Comment lire :** Même lecture pour les 3 kWc de panneaux sur 25 ans. Au prix spot seul, le gain
-> (≈ 87 €/an) couvre à peine l'entretien : les lignes restent très en dessous de zéro.
+> 📊 **Comment lire :** Même lecture pour les 3 kWc de panneaux sur 25 ans. Le gain (≈ 181 €/an) est trop faible face au prix des
+> panneaux : aucune ligne ne repasse au-dessus de zéro en 25 ans.
 
 ### Les 7 graphiques du PowerPoint – PME de Strasbourg
 
@@ -853,7 +894,8 @@ référence n'est pas électrique, soit les autres appareils sont surestimés (f
 ![](fig/st_pme/5_cout_energie.png)
 
 > 📊 **Comment lire :** La facture d'énergie de la PME mois par mois, sans (rouge) et avec équipement (bleu).
-> Le titre donne l'économie annuelle sur l'énergie, hors pénalités, acheminement et taxes.
+> Chaque kWh acheté est compté au prix du marché plus 50 €/MWh d'acheminement et taxes. Le titre donne l'économie
+> annuelle, hors pénalités.
 
 #### 6. Coût de la batterie
 
@@ -867,9 +909,8 @@ référence n'est pas électrique, soit les autres appareils sont surestimés (f
 
 ![](fig/st_pme/7_cout_panneaux.png)
 
-> 📊 **Comment lire :** Même lecture pour les 100 kWc de panneaux, sur 25 ans. La ligne verte (prix bas)
-> passe au-dessus de zéro vers 13 ans : les panneaux sont alors remboursés. Aux prix moyen et haut, ils ne le
-> sont pas en 25 ans si l'on ne compte que le prix de l'énergie.
+> 📊 **Comment lire :** Même lecture pour les 100 kWc de panneaux, sur 25 ans. Les panneaux sont remboursés vers 7 ans au prix bas
+> (ligne verte) et vers 16 ans au prix médian (jaune). Au prix haut (rouge), ils ne le sont pas avant la fin de leur vie.
 
 ---
 
@@ -919,29 +960,32 @@ deux usages**, que la fiche de la tâche 3 annonçait comme la clé de la rentab
 > 📊 **Comment lire :** Pour chaque client, ce que la batterie fait gagner par an en plus des panneaux, selon la façon de la
 > piloter : « prix seul » (acheter bas, restituer haut), « écrêtage seul » (ne servir qu'à raboter les pointes),
 > ou les deux à la fois. Sous chaque montant, le nombre de cycles par an (l'usure). Cumuler les deux usages
-> rapporte le plus pour les trois clients.
+> rapporte le plus pour les trois clients ; pour l'usine, à peine plus que « prix seul ».
 
 | Gain annuel de la batterie | Prix seul | Écrêtage seul | **Prix + écrêtage** |
 |---|---|---|---|
-| PME (100 kWh) | 1 744 € (340 cycles) | 672 € (4 cycles) | **1 908 €** (260 cycles) |
-| Hôpital (250 kWh) | 5 223 € (334 cycles) | 5 962 € (36 cycles) | **6 930 €** (258 cycles) |
-| Usine (1 MWh) | 17 628 € (329 cycles) | 16 170 € (36 cycles) | **27 225 €** (261 cycles) |
+| PME (100 kWh) | 1 875 € (339 cycles) | 575 € (4 cycles) | **1 994 €** (259 cycles) |
+| Hôpital (250 kWh) | 5 066 € (334 cycles) | 3 684 € (36 cycles) | **7 073 €** (258 cycles) |
+| Usine (1 MWh) | 18 551 € (326 cycles) | 5 540 € (36 cycles) | **18 744 €** (258 cycles) |
 
 **Interprétation.**
-- Pour l'usine, **le cumul rapporte 55 % de plus** que l'arbitrage seul : les pénalités passent de 16 800 € à 1 534 €/an,
-  tout en gardant l'essentiel du gain d'arbitrage.
+- Pour l'hôpital, **le cumul rapporte 40 % de plus** que l'arbitrage seul.
+- Pour l'usine, le cumul ne rapporte presque rien de plus (+ 1 %). Avec la pénalité à l'heure (« Mes choix »),
+  l'usine paie 9 571 €/an sans batterie, contre 16 800 € avec mon ancienne règle inventée.
+  - L'arbitrage seul raccourcit déjà les dépassements et fait tomber cette pénalité à 5 026 € ;
+  - le cumul la supprime presque (43 €), mais perd un peu d'arbitrage à cause de la réserve.
 - « Écrêtage seul » use très peu la batterie (36 cycles/an) ; « prix seul » la fait cycler presque chaque jour.
   Le cumul est un compromis : ~260 cycles par an, soit environ 19 ans de cycles, plafonnés à 15 ans d'âge.
 - Pour la PME, l'écrêtage seul rapporte peu **en plus des panneaux**, car le PV supprime déjà une partie des pointes de midi.
 - Les scénarios hôpital et usine utilisent ce cumul. La PME garde la règle « prix seul » pour que ses chiffres
-  plus haut restent valables, mais le cumul lui rapporterait aussi un peu plus (1 908 € au lieu de 1 744 €).
+  plus haut restent valables, mais le cumul lui rapporterait aussi un peu plus (1 994 € au lieu de 1 875 €).
 
 ![Monotone usine](fig/pro_usine_monotone.png)
 
 > 📊 **Comment lire :** Les heures de l'année classées de la plus forte à la plus faible puissance achetée par
 > l'usine. Le pointillé est la puissance prévue au contrat (650 kW). Sans équipement (rouge), l'usine la dépasse
-> environ 750 h/an (le four). Avec la batterie pilotée « prix seul » (bleu), la pointe reste à 790 kW ; avec le
-> cumul prix + écrêtage (vert), les dépassements deviennent très rares.
+> environ 770 h/an (le four). Avec la batterie pilotée « prix seul » (bleu), la pointe reste à 790 kW, mais les
+> dépassements tombent à environ 400 h ; avec le cumul prix + écrêtage (vert), il n'en reste que quelques heures.
 
 ![Batterie usine](fig/pro_usine_batterie_semaine.png)
 
@@ -954,38 +998,46 @@ deux usages**, que la fiche de la tâche 3 annonçait comme la clé de la rentab
 
 | 2025, Strasbourg | Hôpital | Usine |
 |---|---|---|
-| Production PV / autoconsommation / autoproduction | 269 MWh / 100 % / 11 % | 538 MWh / 93 % / 18 % |
-| Coût de l'énergie au spot, sans → avec équipement | 139 278 € → 126 687 € | 167 696 € → 137 142 € |
-| Pénalités de dépassement, sans → avec | 12 000 € → 2 848 € | 16 800 € → 1 534 € |
-| Gain annuel dû au PV / à la batterie | 14 812 € / 6 930 € | 18 595 € / 27 225 € |
-| Retour du PV, prix bas / médian / haut (vie 25 ans) | **12** / 29 / 56 ans | 29 / 43 / 63 ans |
-| Retour de la batterie, prix bas / médian / haut (vie 15 ans) | **11** / 15 / 20 ans | **9 / 12 / 15 ans** |
+Avec les valeurs de « Mes choix » : spot + 50 €/MWh d'acheminement et taxes, surplus revendu au spot, pénalité de
+12,41 € par heure de dépassement.
+
+| 2025, Strasbourg | Hôpital | Usine |
+|---|---|---|
+| Production PV / autoconsommation / autoproduction | 269 MWh / 100 % / 11 % | 538 MWh / 94 % / 18 % |
+| Coût de l'énergie + acheminement et taxes, sans → avec équipement | 257 823 € → 232 059 € | 298 151 € → 243 501 € |
+| Pénalités de dépassement, sans → avec | 14 966 € → 199 € | 9 571 € → 43 € |
+| Gain annuel dû au PV / à la batterie | 33 459 € / 7 073 € | 45 434 € / 18 744 € |
+| Retour du PV, prix bas / médian / haut (vie 25 ans) | **5 / 10 / 17 ans** | **9 / 13 / 16 ans** |
+| Retour de la batterie, prix bas / médian / haut (vie 15 ans) | **11** / 15 / 19 ans | **13** / 17 / 21 ans |
 
 **Interprétation.**
-- **L'usine est le premier cas où la batterie est rentable** : remboursée en 9 à 15 ans, pour une durée de
-  vie d'environ 15 ans, même au prix d'achat haut. L'hôpital est rentable au prix bas et à la limite au prix médian.
-- **Ce résultat repose sur les pénalités de dépassement, dont le montant est inventé** (10 € par kW dépassé et
-  par mois). Le graphique suivant montre ce qui se passe s'il change.
-- Le PV de l'usine se rembourse mal (29 ans au prix bas). Avec 500 kWc, je prends le coût unitaire de la classe
-  « 1 MWc » de la fiche prix (0,75 à 1,2 €/Wc), et l'usine produit peu le week-end, quand le soleil est revendu à bas prix.
+- **Les panneaux sont rentables chez les deux clients, à tous les niveaux de prix.** Presque toute leur production
+  est consommée sur place et évite le spot **et** l'acheminement et les taxes.
+- **La batterie n'est rentable qu'au prix d'achat bas** : 11 ans pour l'hôpital, 13 ans pour l'usine, pour 15 ans de vie.
+  L'hôpital est tout juste à l'équilibre au prix médian (15 ans).
+- **Pourquoi l'usine a perdu sa rentabilité.** Avec mon ancienne pénalité inventée (10 €/kW/mois), sa batterie se
+  remboursait en 9 à 15 ans. La règle réelle du tarif C4 (12,41 € par heure) coûte moins cher pour des pointes
+  courtes et régulières comme celles du four. Le graphique suivant montre l'effet du montant de la pénalité.
 
 ![Sensibilité pénalité](fig/pro_sensibilite_penalite.png)
 
-> 📊 **Comment lire :** Nombre d'années pour rembourser la batterie (au prix d'achat médian) selon le montant de
-> la pénalité de dépassement, de 0 à 30 € par kW et par mois. Sous le pointillé (15 ans, sa durée de vie),
-> la batterie est rentable. Sans pénalité (à gauche), aucune ne l'est ; plus la pénalité est élevée, plus la
-> batterie qui écrête les pointes devient intéressante.
+> 📊 **Comment lire :** Nombre d'années pour rembourser la batterie (au prix d'achat médian) selon le montant de la pénalité,
+> de 0 à 100 € par heure passée au-dessus de la puissance prévue au contrat. Le trait vertical gris marque la valeur retenue
+> (12,41 €/h). Sous le pointillé horizontal (15 ans, la durée de vie), la batterie est rentable. Il faut au moins
+> 25 €/h pour l'usine et 50 €/h pour la PME.
 
-| Retour de la batterie (prix médian) selon la pénalité | 0 €/kW/mois | 5 | 10 | 20 | 30 |
-|---|---|---|---|---|---|
-| PME | 32 ans | 26 | 22 | 17 | 14 |
-| Hôpital | 28 ans | 20 | 15 | 10,5 | 8 |
-| Usine | 25 ans | 16 | **12** | 8 | 6 |
+| Retour de la batterie (prix médian) selon la pénalité | 0 €/h | 5 | **12,41** | 25 | 50 | 100 |
+|---|---|---|---|---|---|---|
+| PME | 30 ans | 26 | **21** | 16,5 | 11 | 7 |
+| Hôpital | 31 ans | 22 | **15** | 10 | 6 | 3 |
+| Usine | 24 ans | 21 | **17** | 13 | 9 | 6 |
 
 **Conclusion pour la question du projet** (« une batterie est-elle rentable chez un client ? ») : sur le
-seul arbitrage des prix de 2025, **non**. Elle peut le devenir chez un client **à fortes pointes de puissance**
-(usine, hôpital), en **cumulant** arbitrage et écrêtage, **si les pénalités de dépassement sont suffisantes**
-(au moins 10 €/kW/mois pour l'usine dans cette simulation). Il faut donc récupérer la vraie grille tarifaire.
+seul arbitrage des prix de 2025, **non**. Chez un client **à fortes pointes de puissance** (usine, hôpital), en
+**cumulant** arbitrage et écrêtage, elle est **tout juste rentable** au prix d'achat bas avec la pénalité réelle du tarif C4.
+Elle le devient nettement si les pénalités sont plus fortes : c'est le cas des gros clients raccordés en HTA, que je n'ai pas modélisés.
+**Le PV, lui, est rentable chez tous les professionnels** dès qu'on compte l'acheminement et les taxes évités.
+Il faut maintenant **confirmer la grille tarifaire réelle**, en particulier la formule HTA pour l'hôpital et l'usine.
 
 ### Les 7 graphiques du PowerPoint – hôpital
 
@@ -1024,8 +1076,8 @@ seul arbitrage des prix de 2025, **non**. Elle peut le devenir chez un client **
 
 ![](fig/pro_hopital/5_cout_energie.png)
 
-> 📊 **Comment lire :** La facture d'énergie de l'hôpital mois par mois, sans (rouge) et avec équipement (bleu),
-> hors pénalités, acheminement et taxes. L'écart est plus grand au printemps et en été, grâce aux panneaux.
+> 📊 **Comment lire :** La facture d'énergie de l'hôpital mois par mois, sans (rouge) et avec équipement (bleu), acheminement et taxes
+> compris (50 €/MWh), hors pénalités. L'écart est plus grand au printemps et en été, grâce aux panneaux.
 
 #### 6. Coût de la batterie
 
@@ -1033,14 +1085,14 @@ seul arbitrage des prix de 2025, **non**. Elle peut le devenir chez un client **
 
 > 📊 **Comment lire :** À gauche, le prix de la batterie de 250 kWh selon trois devis ; à droite, l'argent cumulé
 > au fil des années (prix payé, puis gain annuel ajouté). La ligne verte (prix bas) repasse au-dessus de zéro
-> vers 11 ans : la batterie est remboursée avant la fin de sa vie (15 ans).
+> vers 11 ans, la jaune (prix médian) tout juste à 15 ans, la fin de sa vie ; la rouge ne le fait pas.
 
 #### 7. Coût des panneaux
 
 ![](fig/pro_hopital/7_cout_panneaux.png)
 
-> 📊 **Comment lire :** Même lecture pour les 250 kWc de panneaux, sur 25 ans. Au prix bas, ils sont remboursés
-> vers 12 ans ; au prix moyen et au prix haut, pas avant la fin de leur vie si l'on ne compte que le prix de l'énergie.
+> 📊 **Comment lire :** Même lecture pour les 250 kWc de panneaux, sur 25 ans. Ils sont remboursés vers 5 ans au prix bas, 10 ans au
+> prix médian et 17 ans au prix haut, bien avant la fin de leur vie.
 
 ### Les 7 graphiques du PowerPoint – usine
 
@@ -1079,44 +1131,48 @@ seul arbitrage des prix de 2025, **non**. Elle peut le devenir chez un client **
 
 ![](fig/pro_usine/5_cout_energie.png)
 
-> 📊 **Comment lire :** La facture d'énergie de l'usine mois par mois, sans (rouge) et avec équipement (bleu),
-> hors pénalités, acheminement et taxes. Le titre donne l'économie sur l'année.
+> 📊 **Comment lire :** La facture d'énergie de l'usine mois par mois, sans (rouge) et avec équipement (bleu), acheminement et taxes
+> compris (50 €/MWh), hors pénalités. Le titre donne l'économie sur l'année.
 
 #### 6. Coût de la batterie
 
 ![](fig/pro_usine/6_cout_batterie.png)
 
 > 📊 **Comment lire :** À gauche, le prix de la batterie de 1 MWh selon trois devis ; à droite, l'argent cumulé
-> au fil des années. Les lignes verte et jaune repassent au-dessus de zéro avant 15 ans, la rouge (prix haut) tout
-> juste : c'est le seul cas où la batterie est remboursée avant la fin de sa vie, grâce aux pénalités évitées.
+> au fil des années. Seule la ligne verte (prix bas) repasse au-dessus de zéro, vers 13 ans, avant la fin de
+> sa vie (15 ans). Aux prix médian et haut, la batterie n'est pas remboursée.
 
 #### 7. Coût des panneaux
 
 ![](fig/pro_usine/7_cout_panneaux.png)
 
-> 📊 **Comment lire :** Même lecture pour les 500 kWc de panneaux, sur 25 ans. Aucune ligne ne repasse au-dessus de
-> zéro : sur le seul prix de l'énergie, les panneaux de l'usine ne sont pas remboursés en 25 ans.
+> 📊 **Comment lire :** Même lecture pour les 500 kWc de panneaux, sur 25 ans. Les trois lignes repassent au-dessus de zéro, vers 9, 13 et
+> 16 ans : les panneaux sont remboursés bien avant la fin de leur vie, à tous les niveaux de prix.
 
 ---
 
 ## Limites connues (à garder en tête en lisant les chiffres)
 
-1. **Clients inventés** (studio, PME, hôpital, usine ; jours fériés non modélisés) et **pénalité de dépassement inventée** (10 €/kW/mois), qui décide de la rentabilité des batteries à fortes pointes.
-2. **Pas d'acheminement ni de taxes** dans le coût par défaut : gains de l'autoconsommation sous-estimés (§ 7).
+1. **Clients inventés** (studio, PME, hôpital, usine ; jours fériés non modélisés).
+   - Pénalité de dépassement : règle C4 du TURPE (12,41 €/h), appliquée aussi à l'hôpital et à l'usine, qui relèvent en réalité de la HTA.
+   - C'est elle qui décide de la rentabilité des batteries à fortes pointes.
+2. **Acheminement et taxes :**
+   - comptés seulement dans la simulation de Strasbourg, avec des **ordres de grandeur** (75 / 50 €/MWh) ;
+   - pas dans les étapes 1 à 8 (§ 7) ;
+   - abonnement et TVA ne sont jamais comptés.
 3. Une seule année (2025), répétée sur toute la durée de vie : pas d'actualisation, pas d'inflation, pas de dégradation.
 4. PV : profil national, ou rayonnement **régional** (Grand Est) sur surface horizontale : ni inclinaison ni orientation des panneaux.
 5. Règles de pilotage simples, non optimales : chronologie des prix ignorée, batterie > 200 kWh mal exploitée en arbitrage seul, réserve d'écrêtage fixée à 30 % sans optimisation.
 8. Courbes de charge sectorielles réelles non utilisées : l'API open data d'Enedis ne répond plus, et ODRÉ ne publie que des consommations quotidiennes par secteur.
-9. Chauffage : k = 0,5 kWh/°C/jour inventé ; hôpital et usine supposés chauffés autrement qu'à l'électricité.
+9. Chauffage : k = 0,5 kWh/°C/jour choisi, pas mesuré ; hôpital et usine supposés chauffés autrement qu'à l'électricité.
 6. Coût unitaire pris dans la classe de taille la plus proche (10 / 100 / 1000) : marches d'escalier entre les tailles.
 7. Écart de prix du PV : le médian de la fiche pour 100 kWc (120 k€) est au-dessus du « coût moyen 80–100 k€ en toiture simple » cité dans la même fiche.
 
-## Décisions et informations attendues
+## Choix à faire valider (voir « Mes choix » en tête du rapport)
 
-- **Frigo :** 1 kWh/jour ou paramètres 400 W / 7 min / 2×/h (= 2,24 kWh) ?
-- **Composition du studio** et fréquence des machines ; **coefficient k du chauffage**.
-- **Profils hôpital et usine** : vraies courbes de charge (CSV, Linky, données d'un client) pour remplacer les profils inventés.
-- **Grille de pénalités de dépassement** réelle (TURPE / contrat) et puissance souscrite type : **c'est la donnée qui décide de la rentabilité des batteries** chez les clients à fortes pointes.
-- **Surcoût par kWh acheté** (acheminement + taxes) à retenir par type de client.
-- **Prix de revente** du surplus pour un client pro (spot via agrégateur ? obligation d'achat ?).
-- Valider l'ajout de `import_surcharge_eur_mwh`, `export_price_eur_mwh`, `grid`, `strategy` (dont `peak_limit_kw`, `peak_reserve_kwh`, `anticipate_pv`) et des sources `odre_irradiance` / `rte_eco2mix` régional au format YAML.
+- **Pénalités :** valider la règle C4 (12,41 €/h) et obtenir la **formule HTA** pour l'hôpital et l'usine. **C'est la donnée qui décide de la rentabilité des batteries** chez les clients à fortes pointes.
+- **Acheminement et taxes :** confirmer 75 €/MWh (particulier) et 50 €/MWh (pro) avec la grille officielle.
+- **Revente du surplus :** 11 €/MWh pour le particulier (EDF OA), spot pour le pro.
+- **Frigo** à 1 fois par heure et **chauffage** k = 0,5 : à confirmer.
+- **Profils de consommation** : vraies courbes de charge (CSV, Linky, données d'un client) pour remplacer les profils inventés.
+- Valider l'ajout de `import_surcharge_eur_mwh`, `export_price_eur_mwh`, `grid` (dont `penalty_eur_per_hour`), `strategy` (dont `peak_limit_kw`, `peak_reserve_kwh`, `anticipate_pv`) et des sources `odre_irradiance` / `rte_eco2mix` régional au format YAML.

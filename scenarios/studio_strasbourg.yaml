@@ -7,20 +7,25 @@ site:
   adapter: bottom_up
   seed: 42
   appliances:
-    - {type: cyclic,    name: refrigerateur,  power_w: 400,  on_minutes: 7, cycles_per_hour: 2}
+    # Frigo : CHOIX 1 cycle de 7 min par heure -> 1,12 kWh/jour (≈ 1 kWh/jour annoncé par le plan ;
+    # 2 cycles/h donneraient 2,24 kWh/jour, le double d'un frigo courant).
+    - {type: cyclic,    name: refrigerateur,  power_w: 400,  on_minutes: 7, cycles_per_hour: 1}
     - {type: schedule,  name: tv,             power_w: 100,  windows: [[18, 23]]}
     - {type: schedule,  name: eclairage,      power_w: 200,  windows: [[7, 9], [17, 23]]}
     - {type: daily_run, name: lave_vaisselle, power_w: 1000, duration_h: 2, earliest_h: 19, latest_end_h: 24}
     - {type: daily_run, name: lave_linge,     power_w: 2000, duration_h: 2, earliest_h: 8,  latest_end_h: 22}
     # Chauffage électrique : E_jour = k × (20 − T_moy) si T_moy < 15 °C (formule du point).
-    # k = 0,5 kWh/°C/jour est INVENTÉ (≈ 1 450 kWh/an pour un studio) : à valider.
+    # CHOIX k = 0,5 kWh/°C/jour -> ≈ 1 450 kWh/an de chauffage : ordre de grandeur d'un petit studio
+    # correctement isolé (à remplacer par une vraie facture dès qu'il y en a une).
     - {type: heating,   name: chauffage, k_kwh_per_degc: 0.5, temperatures: {source: odre, region: 44}}
 
 market:
   prices: {adapter: energy_charts, bzn: FR}
   offers:
-    - {type: spot, export_price_eur_mwh: 11}   # surplus racheté 1,1 c€/kWh (fiche prix)
-    - {type: fixed, price_eur_mwh: 80}
+    # CHOIX surcoût 75 €/MWh par kWh acheté (hors TVA) : acheminement TURPE ≈ 45 + accise ≈ 31 (ménage).
+    # CHOIX revente du surplus 11 €/MWh : obligation d'achat EDF OA ≤ 9 kWc depuis juin 2026.
+    - {type: spot, export_price_eur_mwh: 11, import_surcharge_eur_mwh: 75}
+    - {type: fixed, price_eur_mwh: 80, export_price_eur_mwh: 11, import_surcharge_eur_mwh: 75}
 
 # PV d'après le rayonnement solaire réel du Grand Est (ODRÉ), chaîne du plan :
 # surface = kWc ÷ 250 W/m², P = rayonnement × 20 % × surface

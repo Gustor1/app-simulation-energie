@@ -18,7 +18,7 @@ market:
 pv: {peak_kw: 100, source: energy_charts}           # optionnel (ou rte_eco2mix, csv_generic)
 battery: {capacity_kwh: 100, c_rate: 0.5}          # optionnel (paramètres de models/battery.py)
 strategy: {type: price_threshold}                  # surplus_pv (défaut), price_threshold, peak_shaving
-grid: {subscribed_kw: 60, penalty_eur_per_kw: 15}  # optionnel : pénalités de dépassement
+grid: {subscribed_kw: 60, penalty_eur_per_hour: 12.41}  # optionnel : pénalités (ou penalty_eur_per_kw)
 ```
 
 Les chemins relatifs sont résolus par rapport au dossier du fichier YAML.
@@ -201,6 +201,10 @@ def run(config: dict) -> Results:
     if strategy_cfg and strategy_cfg["type"] == "price_threshold" and config.get("grid"):
         # par défaut, la charge depuis le réseau respecte la puissance souscrite
         strategy_cfg = {"grid_limit_kw": config["grid"]["subscribed_kw"], **strategy_cfg}
+    if strategy_cfg and strategy_cfg["type"] == "price_threshold":
+        # le surcoût par kWh acheté (1re offre) entre dans le calcul « l'arbitrage vaut-il le coup ? »
+        surcharge = config["market"]["offers"][0].get("import_surcharge_eur_mwh", 0)
+        strategy_cfg = {"surcharge_eur_mwh": surcharge, **strategy_cfg}
     strategy = rules.from_config(strategy_cfg)
 
     before = simulate.run(inputs["load_kw"], None, None, None, spot)
@@ -219,9 +223,8 @@ def run(config: dict) -> Results:
     grid_cfg = config.get("grid")
     if grid_cfg:
         tz = _period(config)[2]
-        sub, eur = grid_cfg["subscribed_kw"], grid_cfg["penalty_eur_per_kw"]
-        res.penalty_before = market.overrun_penalty(before["grid_kw"], sub, eur, tz)
-        res.penalty_after = market.overrun_penalty(after["grid_kw"], sub, eur, tz)
+        res.penalty_before = market.grid_penalty(before["grid_kw"], grid_cfg, tz)
+        res.penalty_after = market.grid_penalty(after["grid_kw"], grid_cfg, tz)
         extra_before, extra_after = res.penalty_before["penalite_eur"], res.penalty_after["penalite_eur"]
 
     if pv_kw is not None or battery is not None:
@@ -267,7 +270,10 @@ def make_plots(res: Results, out_dir: str | Path, week_start=None) -> list[Path]
     paths.append(plots.save(plots.load_curve(res.after, week_start), out_dir / "3_courbe_de_charge_brute.png"))
     paths.append(plots.save(plots.grid_curve(res.before, res.after, week_start, limit_kw=limit), out_dir / "4_courbe_achetee.png"))
     if res.after["spot_eur_mwh"].notna().all():
-        paths.append(plots.save(plots.energy_cost(res.before, res.after), out_dir / "5_cout_energie.png"))
+        offer = res.config["market"]["offers"][0]  # même offre que les tableaux de rentabilité
+        paths.append(plots.save(plots.energy_cost(res.before, res.after, offer.get("export_price_eur_mwh"),
+                                                  import_surcharge_eur_mwh=offer.get("import_surcharge_eur_mwh", 0.0)),
+                                out_dir / "5_cout_energie.png"))
     if res.profitability:
         gains = component_gains(res)
         levels = ("bas", "median", "haut")
@@ -298,7 +304,7 @@ def component_gains(res: Results) -> dict:
     def total(r):
         c = market.cost(r["grid_kw"], spot, offer).total_eur
         if grid_cfg:
-            c += market.overrun_penalty(r["grid_kw"], grid_cfg["subscribed_kw"], grid_cfg["penalty_eur_per_kw"], tz)["penalite_eur"]
+            c += market.grid_penalty(r["grid_kw"], grid_cfg, tz)["penalite_eur"]
         return c
 
     k = res.annual_factor

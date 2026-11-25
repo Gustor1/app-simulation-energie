@@ -220,6 +220,24 @@ def test_peak_shaving_ecrete_les_pointes():
     pen_apres = market.overrun_penalty(r["grid_kw"], 20, eur_per_kw=10)
     assert pen_avant["penalite_eur"] == pytest.approx(100)  # (30 − 20) kW × 10 €/kW
     assert pen_apres["penalite_eur"] == 0
+    # règle « à l'heure » (CMDPS C4) : 2 h au-dessus de 20 kW (9 h-10 h et 14 h-15 h) × 12,41 €/h
+    pen_h = market.grid_penalty(load, {"subscribed_kw": 20, "penalty_eur_per_hour": 12.41})
+    assert pen_h["heures_en_depassement"] == pytest.approx(2)
+    assert pen_h["penalite_eur"] == pytest.approx(24.82)
+    assert market.grid_penalty(r["grid_kw"], {"subscribed_kw": 20, "penalty_eur_per_hour": 12.41})["penalite_eur"] == 0
+
+
+def test_surcout_par_kwh_rend_l_arbitrage_plus_exigeant():
+    # bas 50 €/MWh, haut 100 €/MWh : 0,9 × 100 − 50 = 40 > 0 -> on arbitre ;
+    # avec un surcoût de 500 €/MWh payé aussi sur les 10 % de pertes : 40 − 0,1 × 500 = −10 -> on n'arbitre plus
+    idx = day_index()
+    spot = pd.Series(np.where(np.arange(96) < 48, 50.0, 100.0), index=idx)
+    inputs = pd.DataFrame({"load_kw": 5.0, "pv_kw": 0.0, "spot_eur_mwh": spot}, index=idx)
+    b = Battery(10)
+    s0, s1 = PriceThreshold(), PriceThreshold(surcharge_eur_mwh=500)
+    s0.prepare(inputs, b)
+    s1.prepare(inputs, b)
+    assert s0.worth.all() and not s1.worth.any()
 
 
 # --- Étape 7 : rentabilité ------------------------------------------------------------

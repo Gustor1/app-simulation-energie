@@ -781,23 +781,23 @@
    "autoconso": 1.0,
    "autoproduction": 0.11,
    "cycles": 258.44,
-   "cout_avant": 139277.54,
-   "cout_apres": 126687.26,
-   "penalite_avant": 12000.0,
-   "penalite_apres": 2848.37,
+   "cout_avant": 257823.29,
+   "cout_apres": 232058.71,
+   "penalite_avant": 14966.46,
+   "penalite_apres": 198.56,
    "pointe_apres": 469.01,
-   "gain_pv": 14811.52,
-   "gain_batterie": 6930.39,
+   "gain_pv": 33459.33,
+   "gain_batterie": 7073.16,
    "bat_vie": 15.0,
    "pv_retour": {
-    "bas": 11.94,
-    "median": 29.09,
-    "haut": 55.82
+    "bas": 4.81,
+    "median": 10.36,
+    "haut": 16.85
    },
    "bat_retour": {
-    "bas": 10.82,
-    "median": 15.33,
-    "haut": 19.84
+    "bas": 10.6,
+    "median": 15.02,
+    "haut": 19.44
    },
    "capex_pv": {
     "bas": 150000.0,
@@ -814,26 +814,26 @@
    "conso_mwh": 2609.1,
    "pointe_kw": 790.0,
    "pv_mwh": 538.11,
-   "autoconso": 0.93,
+   "autoconso": 0.94,
    "autoproduction": 0.18,
-   "cycles": 260.84,
-   "cout_avant": 167695.97,
-   "cout_apres": 137141.65,
-   "penalite_avant": 16800.0,
-   "penalite_apres": 1534.24,
+   "cycles": 257.87,
+   "cout_avant": 298150.97,
+   "cout_apres": 243501.31,
+   "penalite_avant": 9571.21,
+   "penalite_apres": 43.44,
    "pointe_apres": 723.49,
-   "gain_pv": 18595.32,
-   "gain_batterie": 27224.76,
+   "gain_pv": 45433.63,
+   "gain_batterie": 18743.8,
    "bat_vie": 15.0,
    "pv_retour": {
-    "bas": 28.91,
-    "median": 43.21,
-    "haut": 62.53
+    "bas": 9.42,
+    "median": 12.79,
+    "haut": 16.47
    },
    "bat_retour": {
-    "bas": 9.18,
-    "median": 11.94,
-    "haut": 14.69
+    "bas": 13.34,
+    "median": 17.34,
+    "haut": 21.34
    },
    "capex_pv": {
     "bas": 375000.0,
@@ -849,71 +849,71 @@
   "strategies": {
    "PME": {
     "prix seul": {
-     "gain": 1744.32,
-     "cycles": 340.0,
-     "penalite": 674.08,
+     "gain": 1875.13,
+     "cycles": 339.13,
+     "penalite": 580.17,
      "pointe": 107.72,
-     "penalite_sans": 2640.0
+     "penalite_sans": 1833.58
     },
     "écrêtage seul": {
-     "gain": 671.98,
+     "gain": 575.16,
      "cycles": 4.27,
      "penalite": 0.0,
      "pointe": 90.0,
-     "penalite_sans": 2640.0
+     "penalite_sans": 1833.58
     },
     "prix + écrêtage (réserve 30 %)": {
-     "gain": 1907.81,
-     "cycles": 260.0,
-     "penalite": 86.53,
+     "gain": 1993.83,
+     "cycles": 259.43,
+     "penalite": 6.21,
      "pointe": 98.65,
-     "penalite_sans": 2640.0
+     "penalite_sans": 1833.58
     }
    },
    "Hôpital": {
     "prix seul": {
-     "gain": 5222.87,
+     "gain": 5065.91,
      "cycles": 334.31,
-     "penalite": 6032.34,
+     "penalite": 3605.11,
      "pointe": 486.93,
-     "penalite_sans": 12000.0
+     "penalite_sans": 14966.46
     },
     "écrêtage seul": {
-     "gain": 5961.52,
+     "gain": 3683.99,
      "cycles": 36.35,
      "penalite": 0.0,
      "pointe": 400.0,
-     "penalite_sans": 12000.0
+     "penalite_sans": 14966.46
     },
     "prix + écrêtage (réserve 30 %)": {
-     "gain": 6930.39,
+     "gain": 7073.16,
      "cycles": 258.44,
-     "penalite": 2848.37,
+     "penalite": 198.56,
      "pointe": 469.01,
-     "penalite_sans": 12000.0
+     "penalite_sans": 14966.46
     }
    },
    "Usine": {
     "prix seul": {
-     "gain": 17628.21,
-     "cycles": 328.81,
-     "penalite": 15682.4,
+     "gain": 18550.56,
+     "cycles": 325.75,
+     "penalite": 5026.05,
      "pointe": 790.0,
-     "penalite_sans": 16800.0
+     "penalite_sans": 9571.21
     },
     "écrêtage seul": {
-     "gain": 16169.94,
+     "gain": 5539.86,
      "cycles": 35.51,
      "penalite": 0.0,
      "pointe": 650.0,
-     "penalite_sans": 16800.0
+     "penalite_sans": 9571.21
     },
     "prix + écrêtage (réserve 30 %)": {
-     "gain": 27224.76,
-     "cycles": 260.84,
-     "penalite": 1534.24,
+     "gain": 18743.8,
+     "cycles": 257.87,
+     "penalite": 43.44,
      "pointe": 723.49,
-     "penalite_sans": 16800.0
+     "penalite_sans": 9571.21
     }
    }
   },
@@ -923,34 +923,34 @@
     "capex_median": 42500.0,
     "lignes": [
      {
-      "penalite_eur_kw_mois": 0,
-      "gain": 1320.0,
-      "retour_median": 32.2
+      "penalite_eur_h": 0,
+      "gain": 1417.0,
+      "retour_median": 30.0
      },
      {
-      "penalite_eur_kw_mois": 5,
-      "gain": 1614.0,
-      "retour_median": 26.3
+      "penalite_eur_h": 5,
+      "gain": 1649.0,
+      "retour_median": 25.8
      },
      {
-      "penalite_eur_kw_mois": 10,
-      "gain": 1908.0,
-      "retour_median": 22.3
+      "penalite_eur_h": 12.41,
+      "gain": 1994.0,
+      "retour_median": 21.3
      },
      {
-      "penalite_eur_kw_mois": 15,
-      "gain": 2202.0,
-      "retour_median": 19.3
+      "penalite_eur_h": 25,
+      "gain": 2579.0,
+      "retour_median": 16.5
      },
      {
-      "penalite_eur_kw_mois": 20,
-      "gain": 2495.0,
-      "retour_median": 17.0
+      "penalite_eur_h": 50,
+      "gain": 3742.0,
+      "retour_median": 11.4
      },
      {
-      "penalite_eur_kw_mois": 30,
-      "gain": 3083.0,
-      "retour_median": 13.8
+      "penalite_eur_h": 100,
+      "gain": 6067.0,
+      "retour_median": 7.0
      }
     ]
    },
@@ -959,34 +959,34 @@
     "capex_median": 106250.0,
     "lignes": [
      {
-      "penalite_eur_kw_mois": 0,
-      "gain": 3746.0,
-      "retour_median": 28.4
+      "penalite_eur_h": 0,
+      "gain": 3468.0,
+      "retour_median": 30.6
      },
      {
-      "penalite_eur_kw_mois": 5,
-      "gain": 5338.0,
-      "retour_median": 19.9
+      "penalite_eur_h": 5,
+      "gain": 4921.0,
+      "retour_median": 21.6
      },
      {
-      "penalite_eur_kw_mois": 10,
-      "gain": 6930.0,
-      "retour_median": 15.3
+      "penalite_eur_h": 12.41,
+      "gain": 7073.0,
+      "retour_median": 15.0
      },
      {
-      "penalite_eur_kw_mois": 15,
-      "gain": 8522.0,
-      "retour_median": 12.5
+      "penalite_eur_h": 25,
+      "gain": 10731.0,
+      "retour_median": 9.9
      },
      {
-      "penalite_eur_kw_mois": 20,
-      "gain": 10114.0,
-      "retour_median": 10.5
+      "penalite_eur_h": 50,
+      "gain": 17993.0,
+      "retour_median": 5.9
      },
      {
-      "penalite_eur_kw_mois": 30,
-      "gain": 13298.0,
-      "retour_median": 8.0
+      "penalite_eur_h": 100,
+      "gain": 32518.0,
+      "retour_median": 3.3
      }
     ]
    },
@@ -995,34 +995,34 @@
     "capex_median": 325000.0,
     "lignes": [
      {
-      "penalite_eur_kw_mois": 0,
-      "gain": 12867.0,
-      "retour_median": 25.3
+      "penalite_eur_h": 0,
+      "gain": 13333.0,
+      "retour_median": 24.4
      },
      {
-      "penalite_eur_kw_mois": 5,
-      "gain": 20046.0,
-      "retour_median": 16.2
+      "penalite_eur_h": 5,
+      "gain": 15513.0,
+      "retour_median": 21.0
      },
      {
-      "penalite_eur_kw_mois": 10,
-      "gain": 27225.0,
-      "retour_median": 11.9
+      "penalite_eur_h": 12.41,
+      "gain": 18744.0,
+      "retour_median": 17.3
      },
      {
-      "penalite_eur_kw_mois": 15,
-      "gain": 34404.0,
-      "retour_median": 9.4
+      "penalite_eur_h": 25,
+      "gain": 24233.0,
+      "retour_median": 13.4
      },
      {
-      "penalite_eur_kw_mois": 20,
-      "gain": 41583.0,
-      "retour_median": 7.8
+      "penalite_eur_h": 50,
+      "gain": 35133.0,
+      "retour_median": 9.3
      },
      {
-      "penalite_eur_kw_mois": 30,
-      "gain": 55941.0,
-      "retour_median": 5.8
+      "penalite_eur_h": 100,
+      "gain": 56933.0,
+      "retour_median": 5.7
      }
     ]
    }
@@ -1044,43 +1044,43 @@
   "degres_jours": 2900.44,
   "chauffage_kwh": 1450.22,
   "studio": {
-   "conso_kwh": 5224.32,
+   "conso_kwh": 4815.52,
    "pv_kwh": 3228.64,
-   "autoconso": 0.72,
-   "autoproduction": 0.42,
-   "cycles": 360.46,
-   "cout_avant": 378.63,
-   "cout_apres": 200.44,
-   "gain_pv": 86.53,
-   "gain_batterie": 91.67,
+   "autoconso": 0.7,
+   "autoproduction": 0.44,
+   "cycles": 360.47,
+   "cout_avant": 712.34,
+   "cout_apres": 380.28,
+   "gain_pv": 180.59,
+   "gain_batterie": 151.48,
    "penalite_avant": null,
    "penalite_apres": null,
    "rentabilite": {
     "bas": {
      "capex": 6900.0,
-     "gain_net": 119.69,
-     "retour": 57.65
+     "gain_net": 273.57,
+     "retour": 25.22
     },
     "median": {
      "capex": 9850.0,
-     "gain_net": 101.69,
-     "retour": 96.86
+     "gain_net": 255.57,
+     "retour": 38.54
     },
     "haut": {
      "capex": 12800.0,
-     "gain_net": 83.69,
-     "retour": 152.94
+     "gain_net": 237.57,
+     "retour": 53.88
     }
    },
    "pv_retour": {
-    "bas": 139.16,
-    "median": 508.69,
-    "haut": null
+    "bas": 31.94,
+    "median": 49.0,
+    "haut": 73.18
    },
    "bat_retour": {
-    "bas": 32.73,
-    "median": 51.82,
-    "haut": 70.91
+    "bas": 19.8,
+    "median": 31.36,
+    "haut": 42.91
    },
    "bat_vie": 13.87
   },
@@ -1089,41 +1089,41 @@
    "pv_kwh": 107621.38,
    "autoconso": 0.9,
    "autoproduction": 0.33,
-   "cycles": 340.0,
-   "cout_avant": 16860.35,
-   "cout_apres": 11578.49,
-   "gain_pv": 5503.46,
-   "gain_batterie": 1744.32,
-   "penalite_avant": 2640.0,
-   "penalite_apres": 674.08,
+   "cycles": 339.13,
+   "cout_avant": 31247.3,
+   "cout_apres": 21244.83,
+   "gain_pv": 9380.76,
+   "gain_batterie": 1875.13,
+   "penalite_avant": 1833.58,
+   "penalite_apres": 580.17,
    "rentabilite": {
     "bas": {
      "capex": 90000.0,
-     "gain_net": 6347.78,
-     "retour": 14.18
+     "gain_net": 10355.89,
+     "retour": 8.69
     },
     "median": {
      "capex": 162500.0,
-     "gain_net": 5447.78,
-     "retour": 29.83
+     "gain_net": 9455.89,
+     "retour": 17.19
     },
     "haut": {
      "capex": 235000.0,
-     "gain_net": 4547.78,
-     "retour": 51.67
+     "gain_net": 8555.89,
+     "retour": 27.47
     }
    },
    "pv_retour": {
-    "bas": 13.03,
-    "median": 32.4,
-    "haut": 64.21
+    "bas": 7.07,
+    "median": 15.83,
+    "haut": 26.94
    },
    "bat_retour": {
-    "bas": 17.2,
-    "median": 24.36,
-    "haut": 31.53
+    "bas": 16.0,
+    "median": 22.67,
+    "haut": 29.33
    },
-   "bat_vie": 14.71
+   "bat_vie": 14.74
   }
  }
 }

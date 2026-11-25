@@ -48,14 +48,16 @@ class PriceThreshold:
     réseau pour remplir la batterie est diminuée du surplus solaire attendu dans la journée.
     ``peak_limit_kw`` (optionnel) : cumul avec l'écrêtage des pointes ; au-dessus de cette puissance,
     la batterie décharge en priorité. ``peak_reserve_kwh`` : énergie que l'arbitrage laisse en
-    réserve pour ces pointes.
+    réserve pour ces pointes. ``surcharge_eur_mwh`` : surcoût par kWh acheté (acheminement, taxes),
+    payé aussi sur les pertes de la batterie : il rend l'arbitrage un peu plus exigeant.
     """
 
     name = "price_threshold"
 
     def __init__(self, allow_export: bool = False, min_margin_eur_mwh: float = 0.0, tz: str = "Europe/Paris",
                  grid_limit_kw: float | None = None, anticipate_pv: bool = True,
-                 peak_limit_kw: float | None = None, peak_reserve_kwh: float = 0.0):
+                 peak_limit_kw: float | None = None, peak_reserve_kwh: float = 0.0, surcharge_eur_mwh: float = 0.0):
+        self.surcharge_eur_mwh = surcharge_eur_mwh
         self.grid_limit_kw = grid_limit_kw
         self.peak_limit_kw = peak_limit_kw
         self.peak_reserve_kwh = peak_reserve_kwh
@@ -100,7 +102,9 @@ class PriceThreshold:
             if grid_kwh > 1e-6:
                 low[m] = self._threshold(price[m], ch_cap[m], grid_kwh, cheapest=True)
             high[m] = self._threshold(price[m], dis_cap[m], battery.usable_kwh * battery.eta, cheapest=False)
-        worth = high * battery.round_trip_efficiency - low > self.min_margin_eur_mwh
+        # surcoût s par kWh acheté : on paie (bas + s) par kWh chargé, on évite (haut + s) par kWh restitué
+        eta_rt = battery.round_trip_efficiency
+        worth = high * eta_rt - low - (1 - eta_rt) * self.surcharge_eur_mwh > self.min_margin_eur_mwh
         self.low, self.high, self.worth = low, high, worth
 
     def __call__(self, i: int, net_kw: float, spot: float, energy_kwh: float, battery) -> float:

@@ -185,11 +185,14 @@ def grid_curve(before: pd.DataFrame, after: pd.DataFrame, start=None, days: int 
 
 
 def energy_cost(before: pd.DataFrame, after: pd.DataFrame, export_price_eur_mwh: float | None = None,
-                title="Coût de l'énergie (achat − revente, au spot)"):
+                title=None, import_surcharge_eur_mwh: float = 0.0):
     freq, label = _freq_for(before.index)
+    if title is None:
+        title = ("Coût de l'énergie (achat − revente, au spot)" if not import_surcharge_eur_mwh
+                 else f"Coût (spot + {_n(import_surcharge_eur_mwh)} €/MWh d'acheminement et taxes, − revente)")
 
     def cost(r):
-        imp = r["grid_import_kw"] * DT_H * r["spot_eur_mwh"] / 1000
+        imp = r["grid_import_kw"] * DT_H * (r["spot_eur_mwh"] + import_surcharge_eur_mwh) / 1000
         exp_price = r["spot_eur_mwh"] if export_price_eur_mwh is None else export_price_eur_mwh
         exp = r["grid_export_kw"] * DT_H * exp_price / 1000
         return local(imp - exp).resample(freq).sum()

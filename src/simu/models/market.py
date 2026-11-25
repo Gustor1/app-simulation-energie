@@ -76,22 +76,35 @@ def cost_bloc_spot(
 
 
 def overrun_penalty(
-    p_grid_kw: pd.Series, subscribed_kw: float, eur_per_kw: float, tz: str = "Europe/Paris"
+    p_grid_kw: pd.Series, subscribed_kw: float, eur_per_kw: float = 0.0, tz: str = "Europe/Paris",
+    eur_per_hour: float = 0.0,
 ) -> dict:
-    """Pénalité de dépassement de la puissance souscrite.
+    """Pénalité de dépassement de la puissance souscrite (moyennes 15 min). Deux règles, cumulables :
 
-    Hypothèse simplifiée (à valider) : chaque mois, pénalité = €/kW × dépassement maximal du mois
-    (sur les moyennes 15 min). Les vrais tarifs (TURPE, CMDPS) sont plus détaillés.
+    - ``eur_per_kw`` : chaque mois, €/kW × dépassement maximal du mois (règle simplifiée inventée) ;
+    - ``eur_per_hour`` : € par heure passée au-dessus de la puissance souscrite, comme la CMDPS
+      des clients C4 (BT > 36 kVA) du TURPE, ≈ 12,41 €/h (valeur relevée sur des comparateurs, à
+      vérifier dans la grille Enedis). Chaque quart d'heure en dépassement compte pour 0,25 h.
     """
     monthly_peak = p_grid_kw.tz_convert(tz).resample("MS").max()
     overrun = (monthly_peak - subscribed_kw).clip(lower=0)
+    steps_over = int((p_grid_kw > subscribed_kw + 1e-9).sum())
+    hours_over = steps_over * DT_H
     return {
         "pointe_kw": float(p_grid_kw.max()),
         "depassement_max_kw": float(overrun.max()),
         "mois_en_depassement": int((overrun > 0).sum()),
-        "penalite_eur": float(overrun.sum() * eur_per_kw),
-        "pas_en_depassement": int((p_grid_kw > subscribed_kw + 1e-9).sum()),
+        "heures_en_depassement": float(hours_over),
+        "penalite_eur": float(overrun.sum() * eur_per_kw + hours_over * eur_per_hour),
+        "pas_en_depassement": steps_over,
     }
+
+
+def grid_penalty(p_grid_kw: pd.Series, grid_cfg: dict, tz: str = "Europe/Paris") -> dict:
+    """Pénalité d'après la section ``grid`` du scénario
+    (``subscribed_kw`` + ``penalty_eur_per_kw`` et/ou ``penalty_eur_per_hour``)."""
+    return overrun_penalty(p_grid_kw, grid_cfg["subscribed_kw"], grid_cfg.get("penalty_eur_per_kw", 0.0), tz,
+                           grid_cfg.get("penalty_eur_per_hour", 0.0))
 
 
 def cost(p_grid_kw: pd.Series, spot_eur_mwh: pd.Series | None, offer: dict) -> Cost:
