@@ -36,7 +36,7 @@ incomplète, **j'en ai choisi une pour chacune**, d'après une source publique q
 - **Acheminement ≈ 45 €/MWh (particulier) et 50 €/MWh au total (pro) : estimations de ma part, sans source.**
   Les coefficients officiels sont dans des tableaux-images de la grille Enedis que je n'ai pas pu lire. À remplacer par la valeur d'une vraie facture.
 
-Autres sources consultées : [Selectra, dépassement de puissance](https://entreprises.selectra.info/energie/electricite/compteurs/puissance/depassement),
+Autres sources consultées : [Selectra, dépassement de puissance](https://entreprises.selectra.info/energie/electrici   te/compteurs/puissance/depassement),
 [EDF, taxes sur l'électricité](https://www.edf.fr/entreprises/faq-entreprises/facture/les-taxes-evolutions-tarifaires-en-electricite/quelles-sont-les-taxes-applicables-sur-l-electricite),
 [tarif de rachat EDF OA 2026](https://www.les-energies-renouvelables.eu/conseils/photovoltaique/tarif-rachat-electricite-photovoltaique/).
 
@@ -1402,9 +1402,125 @@ On les obtient avec `python -m simu run scenarios/usine_strasbourg_enedis.yaml -
 
 ---
 
+## Les 4 clients : comment je les ai construits, et sont-ils réalistes ?
+
+**Les 4 clients sont inventés.** Aucune donnée de vrai client n'a été fournie. Cette section dit sur quoi chacun est
+basé, le confronte à des données réelles (open data Enedis 2025) et liste ce qui ne va pas.
+
+### Comment ils sont construits
+
+Chaque client est une **liste d'appareils ou d'usages** écrite dans son scénario (`scenarios/*_strasbourg.yaml`).
+Le programme les additionne minute par minute sur toute l'année. Il existe 4 sortes d'usages :
+
+| Sorte | Fonctionnement | Exemple |
+|---|---|---|
+| plage horaire | puissance fixe sur des heures données, éventuellement certains jours seulement | TV 100 W de 18 h à 23 h |
+| cycles | marche N minutes par heure, à un moment tiré au hasard | frigo 400 W, 7 min par heure |
+| tâche quotidienne | une marche de X heures par jour, démarrage tiré au hasard dans une fenêtre | four 300 kW, 3 h entre 6 h et 15 h |
+| chauffage | énergie du jour = k × (20 − T) si T < 15 °C, avec la vraie température 2025 | studio, k = 0,5 |
+
+Les usages de chaque client, et sur quoi ils reposent (consommation de 2025) :
+
+| Client | Usage | Part de la conso | Basé sur |
+|---|---|---|---|
+| **Studio** (4,8 MWh) | lave-linge 2 kW, 2 h **chaque jour** | 30 % | puissance et durée : PowerPoint ; « chaque jour » : **mon choix** |
+| | chauffage, k = 0,5 | 30 % | formule : PowerPoint ; k : mon choix |
+| | lave-vaisselle 1 kW, 2 h **chaque jour** | 15 % | puissance et durée : PowerPoint ; « chaque jour » : **mon choix** |
+| | éclairage 200 W, 7–9 h et 17–23 h | 12 % | PowerPoint |
+| | frigo 400 W, 7 min **1 fois** par heure | 9 % | PowerPoint (qui dit 2 fois) ; corrigé par moi |
+| | TV 100 W, 18–23 h | 4 % | PowerPoint |
+| **Bureaux** (288 MWh) | socle serveurs + froid 15 kW, 24 h/24 | 46 % | mon hypothèse |
+| | bureaux, clim, éclairage 45 kW, 8–19 h en semaine | 45 % | mon hypothèse |
+| | cantine 30 kW, 11 h 30–13 h 30 ; recharge de véhicules 22 kW, 2 h | 9 % | mon hypothèse |
+| **Hôpital** (2 371 MWh) | socle 150 kW, 24 h/24 (blocs, imagerie, ventilation) | 55 % | mon hypothèse |
+| | services de jour 120 kW, 7–19 h | 22 % | mon hypothèse |
+| | groupes froid, activité programmée, cuisine, stérilisation | 23 % | mon hypothèse |
+| **Usine** (2 609 MWh) | 2 lignes de production 400 kW, 5–21 h en semaine | 64 % | mon hypothèse |
+| | veille, sécurité, froid 60 kW, 24 h/24 | 20 % | mon hypothèse |
+| | four 300 kW 3 h/jour ouvré ; compresseur ; maintenance le samedi | 16 % | mon hypothèse |
+
+- Pour le **studio**, la liste d'appareils et la cible (≈ 4 300 kWh/an, la consommation réelle du studio) viennent du
+  PowerPoint.
+- Pour les **3 clients pros**, rien n'était fourni. Les horaires sont des horaires d'activité typiques, les puissances des
+  ordres de grandeur que j'ai choisis. **Aucune source** : c'est la partie la plus fragile.
+
+### Confrontation aux courbes réelles Enedis
+
+Pour chaque client, j'ai pris la vraie courbe 2025 d'un **site moyen** du même segment Enedis : même secteur, même taille
+de raccordement, Grand Est. Deux comparaisons :
+1. le **niveau** : la consommation réelle d'un site moyen, sans mise à l'échelle ;
+2. la **forme** : la courbe ramenée à la même consommation annuelle.
+
+| 2025 | Studio | Bureaux | Hôpital | Usine |
+|---|---|---|---|---|
+| Segment Enedis | particuliers 3–6 kVA | tertiaire 36–120 kVA | tertiaire 250–1 000 kVA | industrie 250–1 000 kVA |
+| **Consommation : mon client / site moyen réel** | 4,8 / 2,2 MWh | **288 / 82 MWh** | 2 371 / 1 064 MWh | 2 609 / 1 032 MWh |
+| Part consommée la nuit (0–6 h) : inventé / réel | 10 / 17 % | 11 / 19 % | 16 / 21 % | 10 / 20 % |
+| Part consommée le week-end : inventé / réel | 28 / 30 % | 13 / 25 % | 26 / 24 % | 9 / 17 % |
+| Nuit ÷ journée, jours ouvrés : inventé / réel | 0,37 / 0,62 | 0,20 / 0,55 | 0,42 / 0,67 | 0,25 / 0,59 |
+| Hiver ÷ été : inventé / réel | 1,85 / 1,52 | 1,02 / 1,44 | 1,00 / 1,12 | 1,03 / 1,12 |
+| Puissance moyenne ÷ pointe : inventé / réel | 14 / 45 % | 29 / 48 % | 54 / 63 % | 38 / 53 % |
+
+> 📊 **Comment lire :** chaque case donne la valeur de mon client inventé, puis celle de la vraie courbe Enedis.
+> « Nuit ÷ journée » : la consommation la nuit comparée à celle du milieu de journée (0,5 = moitié moins la nuit).
+> « Hiver ÷ été » : 1,44 = 44 % de plus en hiver. « Puissance moyenne ÷ pointe » : plus c'est bas, plus la courbe a des pics.
+> Les courbes de la section précédente montrent la même chose en image.
+
+**Attention à la comparaison des pointes.** Une courbe Enedis est la moyenne de centaines de sites : ses pics sont
+forcément lissés. La forme réelle d'un site isolé se situe entre mes courbes et les courbes Enedis. Pour le studio en
+particulier, un vrai logement monte à plusieurs kW quand une machine tourne : sa pointe de 4 kW n'est pas absurde.
+
+### Verdict
+
+**Ce qui est cohérent :**
+- **Les horaires d'activité** tombent aux mêmes heures que dans la réalité (graphique de comparaison ci-dessus).
+- **Le studio, au total** : 4,8 MWh contre 4,3 MWh de consommation réelle (PowerPoint). Un studio chauffé à l'électricité
+  consomme logiquement plus que le site moyen de sa catégorie (2,2 MWh), qui ne l'est souvent pas.
+- **L'hôpital** est le plus proche de la réalité sur la forme : activité 24 h/24, week-end comparable.
+- **La taille des pointes** (112, 500 et 790 kW) rentre dans la tranche de puissance du segment Enedis choisi.
+
+**Ce qui ne va pas, du plus grave au moins grave :**
+1. **Studio : le lave-linge et le lave-vaisselle tournent tous les jours, 2 h.** Le PowerPoint donne leur puissance et
+   leur durée, mais pas leur fréquence ; j'ai pris « chaque jour ». Résultat : le lave-linge pèse 1 460 kWh/an, autant que
+   le chauffage, et 30 % du total. Une machine réelle tourne plutôt quelques fois par semaine, à environ 1 kWh par cycle.
+   **C'est absurde**, même si le total annuel tombe juste, car il manque en contrepartie du chauffage.
+2. **Les clients pros consomment 2 à 3,5 fois plus qu'un site moyen réel de leur catégorie**, surtout les bureaux
+   (288 MWh contre 82). Ce n'est pas impossible pour un site particulier, mais mes clients sont en haut de leur catégorie,
+   sans que rien ne le justifie.
+3. **Trop peu de consommation la nuit et le week-end** (bureaux et usine) : un vrai site garde beaucoup d'appareils
+   allumés en permanence (ventilation, informatique, froid, veilles, éclairage de sécurité). Mes bureaux et mon usine en
+   consomment environ deux fois moins qu'en réalité, en proportion.
+4. **Pas de saisons chez les pros** : ils consomment autant en été qu'en hiver, alors que la réalité varie de 12 à 44 %.
+   Exemple absurde : les bureaux ont « clim + éclairage » à 45 kW toute l'année, y compris en hiver.
+5. **Des créneaux tout ou rien** : 400 kW qui démarrent à 5 h pile chaque jour de l'année. D'où des pointes trop marquées
+   et aucune différence d'un jour à l'autre (seules les tâches quotidiennes ont une heure tirée au hasard).
+6. **Ni jours fériés ni congés** : l'usine tourne même le 25 décembre et tout le mois d'août.
+7. **L'éclairage du studio ne dépend pas des saisons** : allumé jusqu'à 23 h, y compris en juin quand il fait jour à 21 h.
+
+**Conséquence pour les conclusions.** Mes clients pros ont des pointes trop marquées, donc ils **surestiment** le gain de la
+batterie (plus de pénalités à éviter). Avec les vraies courbes, plus aucune batterie n'est rentable au prix médian. La
+conclusion « la batterie est rarement rentable, et seule une vraie courbe de client permet de trancher » est donc
+**renforcée**, pas fragilisée. Le PV reste rentable dans les deux cas.
+
+### À améliorer (par ordre d'utilité)
+
+1. **Une vraie courbe de client** (export Enedis, relevé Linky, GTB) : elle remplace tout le reste. Le simulateur la lit
+   déjà (`docs/format_donnees.md`).
+2. **Studio** : faire tourner le lave-linge 3 jours par semaine et le lave-vaisselle 4 à 5 jours, puis recaler k pour
+   retrouver les 4 300 kWh/an réels. C'est faisable sans code : l'option `days` existe déjà. Le chauffage remonterait
+   alors à environ la moitié de la consommation, ce qui est plus courant pour un logement chauffé à l'électricité.
+3. **Pros** : caler les profils sur Enedis. Ajouter un socle de nuit et de week-end, et ramener la consommation annuelle
+   vers celle du site moyen, sauf raison de faire autrement.
+4. **Saisons** : rendre la clim et le chauffage des pros dépendants de la température. Le modèle de chauffage existe
+   déjà ; il faudrait un modèle de clim.
+5. **Jours fériés et congés** (août pour l'usine) et **variation d'un jour à l'autre** : demande une petite évolution du
+   code.
+
+---
+
 ## Limites connues (à garder en tête en lisant les chiffres)
 
-1. **Clients inventés** (studio, PME, hôpital, usine ; jours fériés non modélisés).
+1. **Clients inventés** (studio, PME, hôpital, usine ; jours fériés non modélisés). Leurs défauts sont détaillés dans la section « Les 4 clients » ci-dessus.
    - Pénalité de dépassement : règle C4 du TURPE (12,41 €/h), appliquée aussi à l'hôpital et à l'usine, qui relèvent en réalité de la HTA.
    - C'est elle qui décide de la rentabilité des batteries à fortes pointes.
 2. **Acheminement et taxes :**
@@ -1425,5 +1541,6 @@ On les obtient avec `python -m simu run scenarios/usine_strasbourg_enedis.yaml -
 - **Acheminement et taxes :** confirmer 75 €/MWh (particulier) et 50 €/MWh (pro) avec la grille officielle.
 - **Revente du surplus :** 11 €/MWh pour le particulier (EDF OA), spot pour le pro.
 - **Frigo** à 1 fois par heure et **chauffage** k = 0,5 : à confirmer.
+- **Fréquence du lave-linge et du lave-vaisselle** du studio : le PowerPoint ne la donne pas. J'ai pris « chaque jour », ce qui est trop ; voir « Les 4 clients ».
 - **Courbe de charge d'un vrai client** (CSV, Linky) : les courbes Enedis donnent la forme moyenne d'un secteur, mais pas les pointes d'un site, qui décident de la rentabilité de la batterie.
 - Valider l'ajout de `import_surcharge_eur_mwh`, `export_price_eur_mwh`, `grid` (dont `penalty_eur_per_hour`), `strategy` (dont `peak_limit_kw`, `peak_reserve_kwh`, `anticipate_pv`) et des sources `odre_irradiance` / `rte_eco2mix` régional au format YAML.
