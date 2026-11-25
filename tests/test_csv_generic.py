@@ -65,3 +65,18 @@ def test_mapping_invalide(tmp_path):
         csv_generic.load(csv, {"timestamp": {"column": "t"}, "columns": {"conso": {"column": "v"}}})
     with pytest.raises(KeyError, match="absentes"):
         csv_generic.load(csv, {"timestamp": {"column": "t"}, "columns": {"load_kw": {"column": "nope"}}})
+
+
+def test_trou_dans_la_courbe_client_erreur_claire_ou_interpolation():
+    from simu.scenario import _fill_load_gaps
+
+    idx = pd.date_range("2025-03-01", periods=16, freq="15min", tz="UTC")
+    s = pd.Series(10.0, index=idx)
+    s.iloc[4:8] = float("nan")  # trou de 1 h (relevés manquants)
+    df = s.to_frame("load_kw")
+    with pytest.raises(ValueError, match="max_gap_hours"):
+        _fill_load_gaps(df, 0)  # par défaut : rien n'est comblé en silence
+    with pytest.warns(UserWarning):
+        out = _fill_load_gaps(df, 2)
+    assert not out["load_kw"].isna().any()
+    assert out["load_kw"].iloc[5] == pytest.approx(10.0)

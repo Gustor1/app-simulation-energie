@@ -75,12 +75,33 @@ def load_site(config: dict) -> pd.DataFrame:
         return load_bottom_up.simulate(appliances, start, end, tz=tz, seed=site.get("seed", 0))
     if adapter == "csv_generic":
         df = csv_generic.load(_path(config, site["load"]), _path(config, site["mapping"]))
-        return df[["load_kw"]]
+        return _fill_load_gaps(df[["load_kw"]], float(site.get("max_gap_hours", 0)))
     if adapter == "enedis_open":
         # courbe réelle d'un site moyen du segment (open data Enedis), mise à l'échelle de annual_kwh
         opts = {k: site[k] for k in ("dataset", "region", "sector", "power_range", "profile", "annual_kwh") if k in site}
         return enedis_open.load_profile(start, end, tz=tz, **opts)
     raise ValueError(f"adaptateur de site inconnu : {adapter!r} (disponibles : bottom_up, csv_generic, enedis_open)")
+
+
+def _fill_load_gaps(df: pd.DataFrame, max_gap_h: float) -> pd.DataFrame:
+    """Trous de la courbe de charge (relevés manquants) : interpolés s'ils durent ≤ ``max_gap_h``,
+    sinon erreur explicite (par défaut 0 h : aucun trou n'est comblé sans qu'on le demande)."""
+    s = df["load_kw"]
+    if not s.isna().any():
+        return df
+    gap_id = s.notna().cumsum()
+    gap_len_h = s.isna().groupby(gap_id).transform("sum") * standard.DT_H
+    filled = s.interpolate(limit_direction="both")
+    s = s.where(s.notna() | (gap_len_h > max_gap_h), filled)
+    if s.isna().any():
+        first = s[s.isna()].index[0]
+        raise ValueError(
+            f"courbe de charge : {int(s.isna().sum())} quarts d'heure sans valeur (premier trou : {first} UTC, "
+            f"le plus long : {gap_len_h.max():g} h). Compléter le fichier, ou autoriser l'interpolation "
+            f"des petits trous avec site.max_gap_hours (ex. 2)."
+        )
+    warnings.warn(f"courbe de charge : trous ≤ {max_gap_h:g} h interpolés", stacklevel=2)
+    return df.assign(load_kw=s)
 
 
 def _resolve_temperatures(appliance, start, end):

@@ -44,6 +44,8 @@ DataFrame pandas, index UTC au pas de 15 min, colonnes `load_kw` (kW), `pv_cf` (
 
 Les réponses des API sont mises en cache dans `data/cache/`. Constats sur les sources : `docs/sources_donnees.md`.
 
+**Où sont les données, sous quel format, et comment brancher une vraie courbe de client (données confidentielles) : [docs/format_donnees.md](docs/format_donnees.md).**
+
 ## Lancer un scénario
 
 ```bash

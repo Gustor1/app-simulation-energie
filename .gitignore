@@ -7,3 +7,6 @@ data/cache/
 # documents Office ouverts
 ~$*
 results/
+# données confidentielles d'entreprise (voir docs/format_donnees.md)
+data/prive/
+scenarios/prive/
