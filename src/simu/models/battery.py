@@ -60,12 +60,17 @@ class Battery:
 
         Renvoie (P_charge, P_décharge, nouvelle énergie stockée).
         """
+        # Si la stratégie demande une charge, respecte à la fois sa demande, la puissance max et la place restante.
         if request_kw > 0:
             p = min(request_kw, self.p_max_kw, max(0.0, self.e_max - energy_kwh) / (self.eta * DT_H))
+            # Renvoie la puissance réellement absorbée, aucune décharge, et l'énergie après les pertes.
             return p, 0.0, energy_kwh + self.eta * p * DT_H
+        # Si la stratégie demande une décharge, respecte demande, puissance max et énergie au-dessus du SOC mini.
         if request_kw < 0:
             p = min(-request_kw, self.p_max_kw, max(0.0, energy_kwh - self.e_min) * self.eta / DT_H)
+            # Renvoie une puissance de décharge positive pour les calculs, et retire l'énergie avec les pertes.
             return 0.0, p, energy_kwh - p / self.eta * DT_H
+        # Une consigne nulle laisse la batterie au même niveau.
         return 0.0, 0.0, energy_kwh
 
     def wear_cost_eur_kwh(self, capex_eur: float) -> float:

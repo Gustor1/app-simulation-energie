@@ -23,13 +23,18 @@ def run(
     spot_eur_mwh: pd.Series | None = None,
 ) -> pd.DataFrame:
     """Renvoie un DataFrame (index standard) avec toutes les grandeurs par pas (kW, kWh, SOC)."""
+    # L'index de la consommation définit les quarts d'heure à simuler.
     index = load_kw.index
+    # Convertit les entrées en tableaux numériques; sans PV, la production est nulle.
     load = load_kw.to_numpy(dtype=float)
     pv = np.zeros(len(index)) if pv_kw is None else pv_kw.reindex(index).fillna(0).to_numpy(dtype=float)
+    # Aligne aussi le prix sur les mêmes pas; NaN indique qu'aucun prix n'a été fourni.
     spot = (
         np.full(len(index), np.nan) if spot_eur_mwh is None else spot_eur_mwh.reindex(index).to_numpy(dtype=float)
     )
+    # Bilan avant batterie : positif = le site doit acheter, négatif = surplus solaire.
     net = load - pv
+    # Réserve une valeur par quart d'heure pour les puissances réelles et l'énergie finale stockée.
     charge = np.zeros(len(index))
     discharge = np.zeros(len(index))
     energy = np.zeros(len(index))  # énergie stockée en FIN de pas
@@ -37,15 +42,22 @@ def run(
     if battery is not None:
         if strategy is None:
             raise ValueError("une batterie demande une stratégie")
+        # Donne à la stratégie toutes les données du scénario pour préparer ses seuils journaliers.
         inputs = pd.DataFrame({"load_kw": load, "pv_kw": pv, "spot_eur_mwh": spot}, index=index)
         strategy.prepare(inputs, battery)
+        # Initialise l'énergie stockée selon le SOC de départ configuré.
         e = battery.e_init()
         for i in range(len(index)):
+            # La stratégie demande une puissance : positive = charger, négative = décharger.
             request = strategy(i, net[i], spot[i], e, battery)
+            # Le modèle batterie applique les limites de puissance, de capacité et de rendement.
             charge[i], discharge[i], e = battery.step(e, request)
+            # Conserve le SOC/énergie après ce quart d'heure pour le graphique.
             energy[i] = e
 
+    # Calcule l'échange net réseau avec la batterie; positif = achat, négatif = injection.
     grid = net + charge - discharge
+    # Assemble les séries de base que les graphiques et bilans vont réutiliser.
     out = pd.DataFrame(
         {
             "load_kw": load,
@@ -60,11 +72,14 @@ def run(
         },
         index=index,
     )
+    # Le surplus solaire sert d'abord à la charge batterie; cette part alimente les barres jaunes.
     surplus = np.clip(pv - load, 0, None)
     out["pv_to_battery_kw"] = np.minimum(charge, surplus)
+    # Toute charge batterie non couverte par le PV vient du réseau; c'est la série des barres bleues.
     out["grid_to_battery_kw"] = charge - out["pv_to_battery_kw"]
     out["pv_export_kw"] = np.clip(surplus - out["pv_to_battery_kw"], 0, None)
     if battery is not None:
+        # Garde l'énergie stockée en kWh et son ratio à la capacité nominale pour le panneau du haut.
         out["energy_kwh"] = energy
         out["soc"] = energy / battery.capacity_kwh
     return out

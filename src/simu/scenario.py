@@ -285,12 +285,14 @@ def make_plots(res: Results, out_dir: str | Path, week_start=None) -> list[Path]
     """Les 7 graphiques de PLAN_SIMULATION.md §4.6 (ceux qui ont un sens pour ce scénario)."""
     from simu import plots
 
+    # Prépare le dossier dans lequel les figures seront enregistrées.
     out_dir = Path(out_dir)
     paths = []
     limit = (res.config.get("grid") or {}).get("subscribed_kw")
     if res.after["pv_kw"].sum() > 0:
         paths.append(plots.save(plots.solar_use(res.after), out_dir / "1_utilisation_solaire.png"))
     if res.battery is not None:
+        # Passe les résultats déjà simulés et la semaine demandée à la fonction qui dessine la batterie.
         paths.append(plots.save(plots.battery_use(res.after, week_start), out_dir / "2_utilisation_batterie.png"))
     paths.append(plots.save(plots.load_curve(res.after, week_start), out_dir / "3_courbe_de_charge_brute.png"))
     paths.append(plots.save(plots.grid_curve(res.before, res.after, week_start, limit_kw=limit), out_dir / "4_courbe_achetee.png"))

@@ -110,26 +110,44 @@ def solar_use(r: pd.DataFrame, title="Utilisation du solaire"):
 
 
 def battery_use(r: pd.DataFrame, start=None, days: int = 7, title="Utilisation de la batterie"):
+    # Garde uniquement la période à montrer; les résultats r ont déjà été calculés par simulate.run.
     w = _window(r, start, days)
+    # Crée le panneau SOC en haut et le panneau des puissances/prix en bas, avec un axe du temps partagé.
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 6), sharex=True, gridspec_kw={"height_ratios": [1, 1.3]})
+    # Convertit la fraction SOC (0 à 1) en pourcentage et remplit la zone sous la courbe.
     ax1.fill_between(w.index, w["soc"] * 100, color=C["bat"], alpha=0.35, step="post")
+    # Dessine le niveau de charge en escalier, car chaque valeur vaut pour un pas de 15 minutes.
     ax1.plot(w.index, w["soc"] * 100, color=C["bat"], drawstyle="steps-post")
+    # Nomme et borne l'axe vertical du panneau supérieur.
     ax1.set_ylabel("SOC (%)")
     ax1.set_ylim(0, 100)
+    # Affiche le titre transmis par le scénario ou le rapport.
     ax1.set_title(title)
+    # Barres positives jaunes : puissance de charge qui vient directement du surplus solaire.
     ax2.bar(w.index, w["pv_to_battery_kw"], width=DT_H / 24, color=C["pv"], label="charge depuis le PV", align="edge")
+    # Barres positives bleues : charge venant du réseau, empilée au-dessus de la charge solaire.
     ax2.bar(w.index, w["grid_to_battery_kw"], width=DT_H / 24, bottom=w["pv_to_battery_kw"], color=C["grid_after"],
             label="charge depuis le réseau", align="edge")
+    # Le signe moins dessine la puissance déchargée sous zéro; la colonne source reste positive.
     ax2.bar(w.index, -w["bat_discharge_kw"], width=DT_H / 24, color=C["grid"], label="décharge", align="edge")
+    # Le prix peut être absent dans certains scénarios; dans ce cas on ne dessine pas la ligne violette.
     if w["spot_eur_mwh"].notna().any():
+        # Ajoute un axe vertical droit indépendant, pour ne pas mélanger prix (€/MWh) et puissance (kW).
         ax3 = ax2.twinx()
+        # Dessine le prix spot en escalier sur le même axe du temps que les barres.
         ax3.plot(w.index, w["spot_eur_mwh"], color=C["spot"], lw=1, alpha=0.8, drawstyle="steps-post", label="spot")
+        # Indique l'unité du prix et évite une deuxième grille qui gênerait la lecture.
         ax3.set_ylabel("spot (€/MWh)", color=C["spot"])
         ax3.grid(False)
+    # La ligne zéro sépare visuellement charge positive et décharge négative.
     ax2.axhline(0, color="black", lw=0.6)
+    # Nomme l'axe de puissance et explicite le sens du signe.
     ax2.set_ylabel("kW (+ charge / − décharge)")
+    # Affiche la légende des flux batterie; le prix a son propre axe et son libellé.
     ax2.legend(loc="upper left", ncol=3)
+    # Formate les dates/heures selon la durée affichée et le fuseau local.
     _time_axis(ax2, days)
+    # Renvoie la figure; son appelant pourra l'enregistrer en PNG.
     return fig
 
 

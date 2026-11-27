@@ -787,7 +787,9 @@ def summarize(r_):
 # --- Hôpital et usine (Strasbourg) --------------------------------------------------------
 print("Hôpital et usine")
 pro = {}
+# Ces deux scénarios sont simulés; la semaine du 16 juin est ensuite passée à make_plots.
 for key, file_, week in [("hopital", "hopital_strasbourg", "2025-06-16"), ("usine", "usine_strasbourg", "2025-06-16")]:
+    # Charge le YAML et calcule l'année complète : consommation, PV, stratégie, batterie et prix.
     cfg_ = scenario.read(ROOT / "scenarios" / f"{file_}.yaml")
     res_ = scenario.run(cfg_)
     pro[key] = (cfg_, res_)
@@ -795,6 +797,7 @@ for key, file_, week in [("hopital", "hopital_strasbourg", "2025-06-16"), ("usin
                                  seed=cfg_["site"]["seed"])
     title_ = {"hopital": "Hôpital fictif (bottom-up)", "usine": "Usine fictive (bottom-up)"}[key]
     fig(f"pro_{key}_semaine", plots.load_curve(simulate.run(by_.sum(axis=1).rename("load_kw")), week, 7, title_, by=by_))
+    # Crée les graphiques du scénario; le numéro 2 appelle plots.battery_use pour cette semaine.
     for p in scenario.make_plots(res_, FIG / f"pro_{key}", week):
         print("  ", key, p.name)
 
