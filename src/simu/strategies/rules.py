@@ -80,46 +80,70 @@ class PriceThreshold:
         return float(p[order][k])
 
     def prepare(self, inputs: pd.DataFrame, battery) -> None:
+        # Récupère les prix et calcule la puissance nette à fournir par le réseau (charge moins PV).
         spot = inputs["spot_eur_mwh"]
         net = (inputs["load_kw"] - inputs["pv_kw"]).to_numpy()
+        # La puissance nominale maximale de charge/décharge est fixée par la batterie.
         p_max = battery.p_max_kw
+        # Capacité de décharge par pas : déficit du site, sauf si l'export batterie est autorisé.
         dis_cap = np.full(len(net), p_max) if self.allow_export else np.clip(net, 0, p_max)
+        # Capacité de charge réseau : puissance batterie, réduite si la limite réseau serait dépassée.
         if self.grid_limit_kw is not None:
             ch_cap = np.clip(self.grid_limit_kw - net, 0, p_max)
         else:
             ch_cap = np.full(len(net), p_max)
+        # Lorsqu'il y a déjà du surplus PV, ce pas ne compte pas comme occasion de charge réseau.
         ch_cap[net < 0] = 0  # les heures de surplus PV ne servent pas à charger depuis le réseau
+        # Calcule le surplus PV utilisable par la batterie à chaque pas.
         surplus = np.clip(-net, 0, p_max)  # surplus PV stockable à chaque pas (kW)
+        # Regroupe les pas par journée locale : les seuils bas/haut sont recalculés chaque jour.
         day = spot.index.tz_convert(self.tz).normalize()
+        # Initialise les seuils : aucun prix ne déclenchera une action tant que le seuil n'est pas calculé.
         low = np.full(len(net), -np.inf)
         high = np.full(len(net), np.inf)
+        # Convertit les séries en tableaux pour le calcul des seuils.
         price = spot.to_numpy()
         for d in day.unique():
+            # Sélectionne tous les quarts d'heure appartenant à la journée locale courante.
             m = np.asarray(day == d)
             # météo du lendemain connue : on n'achète au réseau que ce que le surplus solaire du jour ne remplira pas
             pv_fill_kwh = float(surplus[m].sum() * DT_H * battery.eta) if self.anticipate_pv else 0.0
+            # Énergie à acheter pour remplir la batterie après apport solaire prévu et pertes de charge.
             grid_kwh = max(0.0, battery.usable_kwh - pv_fill_kwh) / battery.eta
             if grid_kwh > 1e-6:
+                # Seuil bas : prix jusqu'auquel les pas les moins chers permettent de charger l'énergie visée.
                 low[m] = self._threshold(price[m], ch_cap[m], grid_kwh, cheapest=True)
+            # Seuil haut : prix des pas les plus chers nécessaires pour restituer l'énergie utilisable.
             high[m] = self._threshold(price[m], dis_cap[m], battery.usable_kwh * battery.eta, cheapest=False)
         # surcoût s par kWh acheté : on paie (bas + s) par kWh chargé, on évite (haut + s) par kWh restitué
         eta_rt = battery.round_trip_efficiency
+        # Marque les journées où l'écart de prix compense le rendement, le surcoût et la marge minimale.
         worth = high * eta_rt - low - (1 - eta_rt) * self.surcharge_eur_mwh > self.min_margin_eur_mwh
+        # Mémorise les seuils et ce verdict pour que __call__ prenne une décision à chaque pas.
         self.low, self.high, self.worth = low, high, worth
 
     def __call__(self, i: int, net_kw: float, spot: float, energy_kwh: float, battery) -> float:
+        # Une consigne négative décharge : le surplus PV est donc absorbé en premier.
         if net_kw < 0:
             return -net_kw  # surplus PV
+        # Si la puissance nette dépasse le seuil, décharge d'abord pour écrêter la pointe.
         if self.peak_limit_kw is not None and net_kw > self.peak_limit_kw:
             return -(net_kw - self.peak_limit_kw)  # écrêtage prioritaire, réserve comprise
+        # Si le prix est bas et l'arbitrage rentable, demande une charge depuis le réseau.
         if self.worth[i] and spot <= self.low[i]:
             if self.grid_limit_kw is not None:
+                # Limite la charge pour que la puissance soutirée reste sous la limite réseau.
                 return max(0.0, min(battery.p_max_kw, self.grid_limit_kw - net_kw))
+            # Sans limite réseau configurée, demande la puissance maximale de la batterie.
             return battery.p_max_kw
+        # Si le prix est haut, décharge pour couvrir le site sans exporter par défaut.
         if spot >= self.high[i]:
             want = battery.p_max_kw if self.allow_export else net_kw
+            # Convertit l'énergie au-dessus du SOC mini et de la réserve en puissance faisable ce quart d'heure.
             available_kw = max(0.0, energy_kwh - battery.e_min - self.peak_reserve_kwh) * battery.eta / DT_H
+            # N'épuise pas la réserve prévue pour les pointes; le signe négatif signifie décharger.
             return -min(want, available_kw)  # l'arbitrage ne touche pas à la réserve d'écrêtage
+        # Entre les seuils, ne charge ni ne décharge : la fonction renvoie une consigne nulle.
         return 0.0
 
 
